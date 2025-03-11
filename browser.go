@@ -15,7 +15,7 @@ import (
 
 type Browser interface {
 	Open(ctx context.Context, in *BrowserOpenInput) error
-	NewPage(ctx context.Context) (Page, error)
+	NewPage(ctx context.Context, newTab bool) (Page, error)
 	Close(ctx context.Context) error
 }
 
@@ -90,12 +90,12 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	return nil
 }
 
-func (b *browser) NewPage(ctx context.Context) (Page, error) {
+func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
 	p, err := newPage(
 		ctx,
 		b.devtool,
 		b.logger,
-		true,
+		newTab,
 	)
 	if err != nil {
 		return nil, err

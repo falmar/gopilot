@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot/internal/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	}
 	defer b.Close(ctx)
 
-	p, err := b.NewPage(ctx)
+	p, err := b.NewPage(ctx, true)
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
@@ -42,7 +42,7 @@ func main() {
 	}
 	defer xMonitor.Stop(ctx)
 
-	err = p.Navigate(ctx, "https://www.poe2wiki.net/wiki/Path_of_Exile_2_Wiki")
+	err = p.Navigate(ctx, "https://www.carrefour.fr/p/jeu-de-construction-secouriste-avec-blesse-playmobil-4008789715067?t=26068")
 	if err != nil {
 		logger.Error("unable to navigate", "error", err)
 		return

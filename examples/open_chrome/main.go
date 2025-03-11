@@ -5,12 +5,11 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
-	"time"
 
 	"github.com/falmar/gopilot"
 )
 
+// Keep chrome open with default setting for local raw cdp testing
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
@@ -27,25 +26,10 @@ func main() {
 		logger.Error("unable open page", "error", err)
 		return
 	}
+	defer b.Close(ctx)
 
-	defer func() {
-		if err := b.Close(ctx); err != nil && !strings.Contains(err.Error(), "signal: killed") {
-			logger.Error("browser closed", "error", err)
-			return
-		}
-	}()
-
-	p, err := b.NewPage(ctx, false)
-	if err != nil {
-		logger.Error("unable open page", "error", err)
+	select {
+	case <-ctx.Done():
 		return
 	}
-
-	err = p.Navigate(ctx, "https://www.google.com")
-	if err != nil {
-		logger.Error("unable to navigate", "error", err)
-		return
-	}
-
-	time.Sleep(5 * time.Second)
 }

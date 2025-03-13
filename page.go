@@ -12,6 +12,7 @@ import (
 	"github.com/mafredri/cdp/protocol/dom"
 	"github.com/mafredri/cdp/protocol/fetch"
 	"github.com/mafredri/cdp/protocol/network"
+	"github.com/mafredri/cdp/protocol/runtime"
 	"github.com/mafredri/cdp/rpcc"
 
 	cdpdevtool "github.com/mafredri/cdp/devtool"
@@ -30,6 +31,9 @@ type Page interface {
 	DisableFetch(ctx context.Context) error
 	AddInterceptRequest(ctx context.Context, cb InterceptRequestCallback) *InterceptRequestHandle
 	RemoveInterceptRequest(ctx context.Context, handle *InterceptRequestHandle)
+
+	Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvaluateOutput, error)
+	QuerySelector(ctx context.Context, query string) (interface{}, error)
 
 	//ListenXHR(ctx context.Context, patterns []string) (chan *XHREvent, error)
 }
@@ -220,6 +224,8 @@ func (p *page) handleInterceptRequest(ctx context.Context) error {
 		return err
 	}
 
+	p.interceptClient = pc
+
 	go func() {
 		defer pc.Close()
 
@@ -259,7 +265,7 @@ func (p *page) handleInterceptRequest(ctx context.Context) error {
 					})
 
 					if err != nil {
-						p.logger.Warn("unable to abort request/response", "error", err)
+						p.logger.Warn("unable to abort request/response", "error", err, "url", rp.Request.URL)
 					}
 				}
 
@@ -273,10 +279,46 @@ func (p *page) handleInterceptRequest(ctx context.Context) error {
 			}
 
 			if err != nil {
-				p.logger.Warn("unable to continue request/response", "error", err)
+				p.logger.Warn("unable to continue request/response", "error", err, "url", rp.Request.URL)
 			}
 		}
 	}()
 
 	return nil
+}
+
+type PageEvaluateInput struct {
+	AwaitPromise bool
+	ReturnValue  bool
+	Expression   string
+}
+type PageEvaluateOutput struct {
+	Value []byte
+}
+
+func (p *page) Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvaluateOutput, error) {
+	userGesture := true
+	allowUnsafe := true
+
+	res, err := p.client.Runtime.Evaluate(ctx, &runtime.EvaluateArgs{
+		Expression:                  in.Expression,
+		UserGesture:                 &userGesture,
+		ReturnByValue:               &in.ReturnValue,
+		AwaitPromise:                &in.AwaitPromise,
+		AllowUnsafeEvalBlockedByCSP: &allowUnsafe,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := &PageEvaluateOutput{}
+	if in.ReturnValue {
+		out.Value = res.Result.Value
+	}
+
+	return out, nil
+}
+
+func (p *page) QuerySelector(ctx context.Context, query string) (interface{}, error) {
+	return nil, errors.New("not implemented")
 }

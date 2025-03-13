@@ -33,7 +33,7 @@ type Page interface {
 	RemoveInterceptRequest(ctx context.Context, handle *InterceptRequestHandle)
 
 	Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvaluateOutput, error)
-	QuerySelector(ctx context.Context, query string) (interface{}, error)
+	QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error)
 
 	//ListenXHR(ctx context.Context, patterns []string) (chan *XHREvent, error)
 }
@@ -319,6 +319,35 @@ func (p *page) Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvalua
 	return out, nil
 }
 
-func (p *page) QuerySelector(ctx context.Context, query string) (interface{}, error) {
-	return nil, errors.New("not implemented")
+type PageQuerySelectorInput struct {
+	Selector string
+}
+type PageQuerySelectorOutput struct {
+	Element Element
+}
+
+func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error) {
+	doc, err := p.client.DOM.GetDocument(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	qrp, err := p.client.DOM.QuerySelector(ctx, &dom.QuerySelectorArgs{
+		NodeID:   doc.Root.NodeID,
+		Selector: in.Selector,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
+		NodeID: &qrp.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &PageQuerySelectorOutput{
+		Element: newElement(drp.Node, p.devtool, p.client),
+	}, nil
 }

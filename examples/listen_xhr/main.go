@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot"
+	gopilot2 "github.com/falmar/gopilot/pkg/gopilot"
 )
 
 func main() {
@@ -18,10 +18,10 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	cfg := gopilot.NewBrowserConfig()
-	b := gopilot.NewBrowser(cfg, logger)
+	cfg := gopilot2.NewBrowserConfig()
+	b := gopilot2.NewBrowser(cfg, logger)
 
-	err := b.Open(ctx, &gopilot.BrowserOpenInput{})
+	err := b.Open(ctx, &gopilot2.BrowserOpenInput{})
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
@@ -34,7 +34,7 @@ func main() {
 		return
 	}
 
-	xMonitor := gopilot.NewXHRMonitor(p)
+	xMonitor := gopilot2.NewXHRMonitor(p)
 	ev, err := xMonitor.Listen(ctx, nil)
 	if err != nil {
 		logger.Error("unable to monitor xhr", "error", err)

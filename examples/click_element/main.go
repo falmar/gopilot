@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot"
+	gopilot2 "github.com/falmar/gopilot/pkg/gopilot"
 )
 
 func main() {
@@ -18,10 +18,10 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	cfg := gopilot.NewBrowserConfig()
-	b := gopilot.NewBrowser(cfg, logger)
+	cfg := gopilot2.NewBrowserConfig()
+	b := gopilot2.NewBrowser(cfg, logger)
 
-	if err := b.Open(ctx, &gopilot.BrowserOpenInput{}); err != nil {
+	if err := b.Open(ctx, &gopilot2.BrowserOpenInput{}); err != nil {
 		logger.Error("failed to open browser", "err", err)
 		return
 	}
@@ -43,7 +43,7 @@ func main() {
 
 	time.Sleep(time.Second * 2)
 
-	out, err := page.QuerySelector(ctx, &gopilot.PageQuerySelectorInput{
+	out, err := page.QuerySelector(ctx, &gopilot2.PageQuerySelectorInput{
 		Selector: "button#L2AGLb",
 	})
 	if err != nil {
@@ -51,7 +51,7 @@ func main() {
 		return
 	}
 
-	clickOut, err := out.Element.Click(ctx, &gopilot.ElementClientInput{
+	clickOut, err := out.Element.Click(ctx, &gopilot2.ElementClickInput{
 		StepDuration: time.Millisecond * 300,
 	})
 	if err != nil {

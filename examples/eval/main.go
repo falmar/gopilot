@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot"
+	gopilot2 "github.com/falmar/gopilot/pkg/gopilot"
 )
 
 // click cookies with eval
@@ -20,10 +20,10 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	cfg := gopilot.NewBrowserConfig()
-	b := gopilot.NewBrowser(cfg, logger)
+	cfg := gopilot2.NewBrowserConfig()
+	b := gopilot2.NewBrowser(cfg, logger)
 
-	if err := b.Open(ctx, &gopilot.BrowserOpenInput{}); err != nil {
+	if err := b.Open(ctx, &gopilot2.BrowserOpenInput{}); err != nil {
 		logger.Error("failed to open browser", "err", err)
 		return
 	}
@@ -45,7 +45,7 @@ func main() {
 
 	time.Sleep(time.Second * 2)
 
-	out, err := page.Evaluate(ctx, &gopilot.PageEvaluateInput{
+	out, err := page.Evaluate(ctx, &gopilot2.PageEvaluateInput{
 		ReturnValue:  true,
 		AwaitPromise: false,
 		Expression: `(() => {

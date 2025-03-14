@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/falmar/gopilot"
+	gopilot2 "github.com/falmar/gopilot/pkg/gopilot"
 )
 
 // Keep chrome open with default setting for local raw cdp testing
@@ -18,10 +18,10 @@ func main() {
 		Level: slog.LevelDebug,
 	}))
 
-	cfg := gopilot.NewBrowserConfig()
-	b := gopilot.NewBrowser(cfg, logger)
+	cfg := gopilot2.NewBrowserConfig()
+	b := gopilot2.NewBrowser(cfg, logger)
 
-	err := b.Open(ctx, &gopilot.BrowserOpenInput{})
+	err := b.Open(ctx, &gopilot2.BrowserOpenInput{})
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return

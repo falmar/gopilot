@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/mafredri/cdp/protocol/storage"
 )
 
 type PageCookie struct {
@@ -22,11 +24,39 @@ type PageCookie struct {
 
 type GetCookiesInput struct{}
 type GetCookiesOutput struct {
-	Cookies PageCookie
+	Cookies []*PageCookie
 }
 
 func (p *page) GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookiesOutput, error) {
-	return nil, errors.New("not implemented")
+	rp, err := p.client.Storage.GetCookies(ctx, &storage.GetCookiesArgs{})
+	if err != nil {
+		return nil, err
+	}
+
+	var cookies []*PageCookie
+
+	for _, c := range rp.Cookies {
+		pc := &PageCookie{
+			Name:     c.Name,
+			Value:    c.Value,
+			Domain:   c.Name,
+			Path:     c.Name,
+			Size:     c.Size,
+			Expires:  nil,
+			Secure:   c.Secure,
+			HttpOnly: c.HTTPOnly,
+			Session:  c.Session,
+		}
+
+		if c.Expires > 0 {
+			t := time.Unix(int64(c.Expires), 0)
+			pc.Expires = &t
+		}
+
+		cookies = append(cookies, pc)
+	}
+
+	return &GetCookiesOutput{Cookies: cookies}, nil
 }
 
 type SetCookiesInput struct {

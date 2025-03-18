@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 
-	gopilot2 "github.com/falmar/gopilot"
 	"github.com/mafredri/cdp/devtool"
 )
 
@@ -27,11 +26,11 @@ type browser struct {
 	datadir  string
 
 	devtool *devtool.DevTools
-	pages   []*gopilot2.page
+	pages   []*page
 }
 
 func NewBrowser(cfg *BrowserConfig, logger *slog.Logger) Browser {
-	return &browser{config: cfg, logger: logger, pages: make([]*gopilot2.page, 0)}
+	return &browser{config: cfg, logger: logger, pages: make([]*page, 0)}
 }
 
 type BrowserOpenInput struct{}
@@ -92,7 +91,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 }
 
 func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
-	p, err := gopilot2.newPage(
+	p, err := newPage(
 		ctx,
 		b.devtool,
 		b.logger,
@@ -102,7 +101,7 @@ func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
 		return nil, err
 	}
 
-	b.pages = append(b.pages, p.(*gopilot2.page))
+	b.pages = append(b.pages, p.(*page))
 
 	return p, nil
 }

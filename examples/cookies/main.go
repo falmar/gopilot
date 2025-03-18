@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
-	gopilot "github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot/pkg/gopilot"
 )
 
 func main() {
@@ -49,5 +50,16 @@ func main() {
 		return
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(time.Second * 2)
+
+	out, err := page.GetCookies(ctx, &gopilot.GetCookiesInput{})
+	if err != nil {
+		logger.Error("unable to get cookies", "error", err)
+	}
+
+	for _, c := range out.Cookies {
+		fmt.Println(c)
+	}
+
+	fmt.Println(out.Cookies)
 }

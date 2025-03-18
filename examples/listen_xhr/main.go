@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	gopilot2 "github.com/falmar/gopilot/pkg/gopilot"
+	gopilot "github.com/falmar/gopilot/pkg/gopilot"
 )
 
 func main() {
@@ -18,23 +18,23 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	cfg := gopilot2.NewBrowserConfig()
-	b := gopilot2.NewBrowser(cfg, logger)
+	cfg := gopilot.NewBrowserConfig()
+	b := gopilot.NewBrowser(cfg, logger)
 
-	err := b.Open(ctx, &gopilot2.BrowserOpenInput{})
+	err := b.Open(ctx, &gopilot.BrowserOpenInput{})
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
 	}
 	defer b.Close(ctx)
 
-	p, err := b.NewPage(ctx, true)
+	page, err := b.NewPage(ctx, true)
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
 	}
 
-	xMonitor := gopilot2.NewXHRMonitor(p)
+	xMonitor := gopilot.NewXHRMonitor(page)
 	ev, err := xMonitor.Listen(ctx, nil)
 	if err != nil {
 		logger.Error("unable to monitor xhr", "error", err)
@@ -42,8 +42,10 @@ func main() {
 	}
 	defer xMonitor.Stop(ctx)
 
-	err = p.Navigate(ctx, "https://www.carrefour.fr/p/jeu-de-construction-secouriste-avec-blesse-playmobil-4008789715067?t=26068")
-	if err != nil {
+	if _, err := page.Navigate(ctx, &gopilot.PageNavigateInput{
+		URL:                "https://www.google.com",
+		WaitDomContentLoad: true,
+	}); err != nil {
 		logger.Error("unable to navigate", "error", err)
 		return
 	}

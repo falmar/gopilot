@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -36,9 +35,32 @@ func main() {
 		}
 	}()
 
+	time.Sleep(time.Second * 2)
+
 	page, err := b.NewPage(ctx, false)
 	if err != nil {
 		logger.Error("unable open page", "error", err)
+		return
+	}
+	defer page.Close(ctx)
+
+	time.Sleep(time.Second * 2)
+
+	// SET COOKIES (avoid set cookie pop up)
+	_, err = page.SetCookies(ctx, &gopilot.SetCookiesInput{
+		Cookies: []*gopilot.PageCookie{
+			{
+				Domain:   ".google.com",
+				Name:     "SOCS",
+				Value:    "CAISHAgBEhJnd3NfMjAyNTAzMTItMF9SQzIaAmVuIAEaBgiA7-K-Bg",
+				Path:     "/",
+				Secure:   true,
+				HttpOnly: false,
+			},
+		},
+	})
+	if err != nil {
+		logger.Error("unable to set cookies", "error", err)
 		return
 	}
 
@@ -49,17 +71,32 @@ func main() {
 		logger.Error("unable to navigate", "error", err)
 		return
 	}
-
 	time.Sleep(time.Second * 2)
 
-	out, err := page.GetCookies(ctx, &gopilot.GetCookiesInput{})
+	// GET COOKIES
+	gcOut, err := page.GetCookies(ctx, &gopilot.GetCookiesInput{})
 	if err != nil {
 		logger.Error("unable to get cookies", "error", err)
 	}
 
-	for _, c := range out.Cookies {
-		fmt.Println(c)
+	for _, c := range gcOut.Cookies {
+		logger.Info("cookie found", "name", c.Name)
 	}
 
-	fmt.Println(out.Cookies)
+	time.Sleep(time.Second * 2)
+
+	// CLEAR COOKIES
+	_, err = page.ClearCookies(ctx, &gopilot.ClearCookiesInput{})
+	if err != nil {
+		logger.Error("unable to clear cookies", "error", err)
+		return
+	}
+
+	// reload to see accept cookies popup
+	_, err = page.Reload(ctx, &gopilot.PageReloadInput{WaitDomContentLoad: true})
+	if err != nil {
+		logger.Error("unable to reload page", "error", err)
+		return
+	}
+	time.Sleep(time.Second * 2)
 }

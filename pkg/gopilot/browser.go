@@ -109,6 +109,11 @@ func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
 func (b *browser) Close(ctx context.Context) error {
 	b.logger.Debug("closing pages", "len", len(b.pages))
 	for _, p := range b.pages {
+		if p.closed {
+			b.logger.Debug("page already closed", "target_id", p.target.ID)
+			continue
+		}
+
 		b.logger.Debug("closing page", "target_id", p.target.ID)
 		err := p.Close(ctx)
 		if err != nil && !errors.Is(err, context.Canceled) {

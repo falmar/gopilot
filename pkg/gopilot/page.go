@@ -20,6 +20,7 @@ type InterceptRequestHandle struct{}
 
 type Page interface {
 	Navigate(ctx context.Context, in *PageNavigateInput) (*PageNavigateOutput, error)
+	Reload(ctx context.Context, in *PageReloadInput) (*PageReloadOutput, error)
 	GetContent(ctx context.Context) (string, error)
 	Close(ctx context.Context) error
 
@@ -43,7 +44,8 @@ type page struct {
 	client  *cdp.Client
 	logger  *slog.Logger
 
-	mux sync.RWMutex
+	mux    sync.RWMutex
+	closed bool
 
 	domEvent cdppage.DOMContentEventFiredClient
 
@@ -104,7 +106,16 @@ func newPage(
 func (p *page) Close(ctx context.Context) error {
 	defer p.conn.Close()
 
-	return p.client.Page.Close(ctx)
+	err := p.client.Page.Close(ctx)
+	if err != nil {
+		return err
+	}
+
+	p.mux.Lock()
+	p.closed = true
+	p.mux.Unlock()
+
+	return nil
 }
 
 type PageEvaluateInput struct {

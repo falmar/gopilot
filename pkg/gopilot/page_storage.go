@@ -2,9 +2,9 @@ package gopilot
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/mafredri/cdp/protocol/network"
 	"github.com/mafredri/cdp/protocol/storage"
 )
 
@@ -60,19 +60,57 @@ func (p *page) GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookies
 }
 
 type SetCookiesInput struct {
-	Cookies PageCookie
+	Cookies []*PageCookie
 }
 type SetCookiesOutput struct{}
 
 func (p *page) SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookiesOutput, error) {
-	return nil, errors.New("not implemented")
+	var cookies []network.CookieParam
+
+	for _, c := range in.Cookies {
+		ncp := network.CookieParam{
+			Name:  c.Name,
+			Value: c.Value,
+		}
+		if c.Domain != "" {
+			ncp.Domain = &c.Domain
+		}
+		if c.Path != "" {
+			ncp.Path = &c.Path
+		}
+		if c.Secure {
+			ncp.Secure = &c.Secure
+		}
+		if c.HttpOnly {
+			ncp.HTTPOnly = &c.HttpOnly
+		}
+		if c.Expires != nil {
+			ncp.Expires = network.TimeSinceEpoch(c.Expires.Unix())
+		}
+
+		cookies = append(cookies, ncp)
+	}
+
+	err := p.client.Storage.SetCookies(ctx, &storage.SetCookiesArgs{
+		Cookies: cookies,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &SetCookiesOutput{}, nil
 }
 
 type ClearCookiesInput struct {
-	Cookies PageCookie
+	Cookies *PageCookie
 }
 type ClearCookiesOutput struct{}
 
 func (p *page) ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error) {
-	return nil, errors.New("not implemented")
+	err := p.client.Storage.ClearCookies(ctx, &storage.ClearCookiesArgs{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClearCookiesOutput{}, nil
 }

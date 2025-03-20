@@ -36,16 +36,18 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
-	gopilot "github.com/falmar/gopilot/pkg/gopilot"
+
+	"github.com/falmar/gopilot/pkg/gopilot"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{ Level: slog.LevelDebug }))
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
 
 	cfg := gopilot.NewBrowserConfig()
 	b := gopilot.NewBrowser(cfg, logger)
@@ -55,12 +57,7 @@ func main() {
 		logger.Error("unable to open browser", "error", err)
 		return
 	}
-	defer func() {
-		if err := b.Close(ctx); err != nil && !strings.Contains(err.Error(), "signal: killed") {
-			logger.Error("browser closed", "error", err)
-			return
-		}
-	}()
+	defer b.Close(ctx)
 
 	pOut, err := b.NewPage(ctx, &gopilot.BrowserNewPageInput{})
 	if err != nil {
@@ -70,24 +67,42 @@ func main() {
 	page := pOut.Page
 	defer page.Close(ctx)
 
-	if _, err := page.Navigate(ctx, &gopilot.PageNavigateInput{ URL: "https://www.google.com", WaitDomContentLoad: true }); err != nil {
+	_, err = page.Navigate(ctx, &gopilot.PageNavigateInput{
+		URL:                "https://www.google.com",
+		WaitDomContentLoad: true,
+	})
+	if err != nil {
 		logger.Error("unable to navigate", "error", err)
 		return
 	}
-    
+
 	time.Sleep(2 * time.Second)
+
+	// do some magic ... 
 }
+
 ```
 
-### Note on Headless Mode
-By default, gopilot runs in headful mode, which may require a display server when running in a Docker container. To switch to headless mode, simply call the `EnableHeadless` method on the `BrowserConfig` object.
+### More Examples
+For more practical illustrations of how to use gopilot, check out the examples provided:
 
-You can start the browser in headless mode as follows:
+- [Click Element](./examples/click_element/main.go)
+- [Cookies](./examples/cookies/main.go)
+- [Evaluate JS](./examples/eval/main.go)
+- [Listen XHR](./examples/listen_xhr/main.go)
+- [Open URL](./examples/open_url/main.go)
+
+### Note on Headless Mode
+By default, gopilot runs in headful mode, which may require a display server when running in a Docker container. To switch to headless mode, simply call the `EnableHeadless` method on the `BrowserConfig` object. You can start the browser in headless mode as follows:
 
 ```go
 // EnableHeadless will make the browser start as headless
+cfg := gopilot.NewBrowserConfig()
+cfg.EnableHeadless()
+
+// which is basically: 
 func (c *BrowserConfig) EnableHeadless() {
-    c.AddArgument("--headless=new")
+	c.AddArgument("--headless=new")
 }
 ```
 

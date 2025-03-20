@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/falmar/gopilot/pkg/gopilot"
@@ -28,12 +27,7 @@ func main() {
 		return
 	}
 
-	defer func() {
-		if err := b.Close(ctx); err != nil && !strings.Contains(err.Error(), "signal: killed") {
-			logger.Error("browser closed", "error", err)
-			return
-		}
-	}()
+	defer b.Close(ctx)
 
 	time.Sleep(time.Second * 2)
 

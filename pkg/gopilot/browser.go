@@ -31,10 +31,17 @@ type browser struct {
 
 	devtool *devtool.DevTools
 	pages   []*page
+
+	waitChan chan error
 }
 
 func NewBrowser(cfg *BrowserConfig, logger *slog.Logger) Browser {
-	return &browser{config: cfg, logger: logger, pages: make([]*page, 0)}
+	return &browser{
+		config:   cfg,
+		logger:   logger,
+		pages:    make([]*page, 0),
+		waitChan: make(chan error),
+	}
 }
 
 type BrowserOpenInput struct{}
@@ -83,16 +90,15 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	}
 
 	b.logger.Debug("waiting for devtool url message")
-	var waitErrorChan = make(chan error) // TODO: close this channel
 	go func() {
-		waitErrorChan <- b.instance.Wait()
+		b.waitChan <- b.instance.Wait()
 	}()
 
 	// TODO: find a better way to know exec command hangs or go defunct
 	waitDuration := time.Second * 5
 	var devtoolsURL string
 	select {
-	case err := <-waitErrorChan:
+	case err := <-b.waitChan:
 		return fmt.Errorf("exec wait exited unexpectedtly or too soon: %w", err)
 
 	case <-time.NewTimer(waitDuration).C:
@@ -174,5 +180,5 @@ func (b *browser) Close(ctx context.Context) error {
 		}
 	}()
 
-	return b.instance.Wait()
+	return <-b.waitChan
 }

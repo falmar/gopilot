@@ -80,7 +80,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	}
 
 	b.logger.Debug("waiting for devtool url message")
-	var waitErrorChan chan error = make(chan error) // TODO: close this channel
+	var waitErrorChan = make(chan error) // TODO: close this channel
 	go func() {
 		waitErrorChan <- b.instance.Wait()
 	}()

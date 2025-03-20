@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/mafredri/cdp/devtool"
 )
@@ -78,14 +79,32 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		return err
 	}
 
-	dtString := strings.Split(<-dtChan, "DevTools listening on")
-	if len(dtString) < 2 {
-		return errors.New("unable to obtain dev tool url")
+	b.logger.Debug("waiting for devtool url message")
+	var waitErrorChan chan error = make(chan error) // TODO: close this channel
+	go func() {
+		waitErrorChan <- b.instance.Wait()
+	}()
+
+	// TODO: find a better way to know exec command hangs or go defunct
+	waitDuration := time.Second * 5
+	var devtoolsURL string
+	select {
+	case err := <-waitErrorChan:
+		return fmt.Errorf("exec wait exited unexpectedtly or too soon: %w", err)
+
+	case <-time.NewTimer(waitDuration).C:
+		return fmt.Errorf("duration %s exceeded waiting for devtool url", waitDuration)
+
+	// successful case
+	case dtMessage := <-dtChan:
+		dtSplit := strings.Split(dtMessage, "DevTools listening on")
+		if len(dtSplit) < 2 {
+			return errors.New("unable to obtain dev tool url")
+		}
+		devtoolsURL = dtSplit[1]
 	}
 
-	b.logger.Debug("listen on", "url", dtString[1])
-
-	b.logger.Debug("creating devtool")
+	b.logger.Debug("creating devtool", "url", devtoolsURL)
 	b.devtool = devtool.New(fmt.Sprintf("http://127.0.0.1:%s", b.config.DebugPort))
 
 	return nil

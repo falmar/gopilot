@@ -29,11 +29,12 @@ func main() {
 	}
 	defer b.Close(ctx)
 
-	page, err := b.NewPage(ctx, false)
+	pOut, err := b.NewPage(ctx, &gopilot.BrowserNewPageInput{})
 	if err != nil {
-		logger.Error("unable to open page", "error", err)
+		logger.Error("unable open page", "error", err)
 		return
 	}
+	page := pOut.Page
 	defer page.Close(ctx)
 
 	time.Sleep(time.Second * 2)

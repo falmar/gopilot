@@ -28,11 +28,13 @@ func main() {
 	}
 	defer b.Close(ctx)
 
-	page, err := b.NewPage(ctx, true)
+	pOut, err := b.NewPage(ctx, &gopilot.BrowserNewPageInput{})
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
 	}
+	page := pOut.Page
+	defer page.Close(ctx)
 
 	xMonitor := gopilot.NewXHRMonitor(page)
 	ev, err := xMonitor.Listen(ctx, nil)

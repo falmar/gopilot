@@ -16,7 +16,7 @@ import (
 
 type Browser interface {
 	Open(ctx context.Context, in *BrowserOpenInput) error
-	NewPage(ctx context.Context, newTab bool) (Page, error)
+	NewPage(ctx context.Context, in *BrowserNewPageInput) (*BrowserNewPageOutput, error)
 	Close(ctx context.Context) error
 }
 
@@ -110,12 +110,19 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	return nil
 }
 
-func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
+type BrowserNewPageInput struct {
+	NewTab bool
+}
+type BrowserNewPageOutput struct {
+	Page Page
+}
+
+func (b *browser) NewPage(ctx context.Context, in *BrowserNewPageInput) (*BrowserNewPageOutput, error) {
 	p, err := newPage(
 		ctx,
 		b.devtool,
 		b.logger,
-		newTab,
+		in.NewTab,
 	)
 	if err != nil {
 		return nil, err
@@ -123,7 +130,7 @@ func (b *browser) NewPage(ctx context.Context, newTab bool) (Page, error) {
 
 	b.pages = append(b.pages, p.(*page))
 
-	return p, nil
+	return &BrowserNewPageOutput{Page: p}, nil
 }
 
 func (b *browser) Close(ctx context.Context) error {

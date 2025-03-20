@@ -35,11 +35,13 @@ func main() {
 		}
 	}()
 
-	page, err := b.NewPage(ctx, false)
+	pOut, err := b.NewPage(ctx, &gopilot.BrowserNewPageInput{})
 	if err != nil {
 		logger.Error("unable open page", "error", err)
 		return
 	}
+	page := pOut.Page
+	defer page.Close(ctx)
 
 	if _, err := page.Navigate(ctx, &gopilot.PageNavigateInput{
 		URL:                "https://www.google.com",

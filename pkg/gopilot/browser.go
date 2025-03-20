@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mafredri/cdp/devtool"
@@ -25,6 +26,8 @@ type browser struct {
 	logger   *slog.Logger
 	instance *exec.Cmd
 	datadir  string
+
+	mux sync.RWMutex
 
 	devtool *devtool.DevTools
 	pages   []*page
@@ -128,13 +131,16 @@ func (b *browser) NewPage(ctx context.Context, in *BrowserNewPageInput) (*Browse
 		return nil, err
 	}
 
+	b.mux.Lock()
 	b.pages = append(b.pages, p.(*page))
+	b.mux.Unlock()
 
 	return &BrowserNewPageOutput{Page: p}, nil
 }
 
 func (b *browser) Close(ctx context.Context) error {
 	b.logger.Debug("closing pages", "len", len(b.pages))
+	b.mux.RLock()
 	for _, p := range b.pages {
 		if p.closed {
 			b.logger.Debug("page already closed", "target_id", p.target.ID)
@@ -147,6 +153,7 @@ func (b *browser) Close(ctx context.Context) error {
 			return err
 		}
 	}
+	b.mux.RUnlock()
 
 	b.devtool = nil
 	b.pages = nil

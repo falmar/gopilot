@@ -1,5 +1,7 @@
 package gopilot
 
+import "os"
+
 // BrowserConfig holds configuration settings for launching a browser instance.
 type BrowserConfig struct {
 	// Path specifies the path to the browser executable.
@@ -19,8 +21,13 @@ type BrowserConfig struct {
 // The default Path is "google-chrome-stable" and the default DebugPort is "9222".
 // It includes several default command-line arguments for browser startup.
 func NewBrowserConfig() *BrowserConfig {
+	execPath := os.Getenv("GOPILOT_CHROME_EXECUTABLE")
+	if execPath == "" {
+		execPath = "google-chrome-stable"
+	}
+
 	c := &BrowserConfig{
-		Path:      "google-chrome-stable", // can be changed by user
+		Path:      execPath, // can be changed by user
 		DebugPort: "9222",
 		Args: []string{
 			"--remote-allow-origins=*",

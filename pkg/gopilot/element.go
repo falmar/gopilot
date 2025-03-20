@@ -18,8 +18,6 @@ type element struct {
 
 	tools  *devtool.DevTools
 	client *cdp.Client
-
-	boxModel dom.BoxModel
 }
 
 func newElement(

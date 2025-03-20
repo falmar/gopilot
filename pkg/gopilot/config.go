@@ -53,3 +53,8 @@ func NewBrowserConfig() *BrowserConfig {
 func (c *BrowserConfig) AddArgument(arg string) {
 	c.Args = append(c.Args, arg)
 }
+
+// EnableHeadless will make the browser to start as headless
+func (c *BrowserConfig) EnableHeadless() {
+	c.AddArgument("--headless=new")
+}

@@ -44,6 +44,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	b.logger.Debug("created data dir", "path", b.datadir)
 
 	b.instance = exec.Command(b.config.Path)
+	b.instance.Env = b.config.Envs
 
 	b.instance.Args = append(
 		b.config.Args,

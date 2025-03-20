@@ -4,11 +4,12 @@ type BrowserConfig struct {
 	Path      string
 	DebugPort string
 	Args      []string
+	Envs      []string
 }
 
 func NewBrowserConfig() *BrowserConfig {
 	c := &BrowserConfig{
-		Path:      "/usr/bin/google-chrome-stable",
+		Path:      "google-chrome-stable", // can be changed by user
 		DebugPort: "9222",
 		Args: []string{
 			"--remote-allow-origins=*",

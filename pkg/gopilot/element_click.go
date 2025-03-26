@@ -8,38 +8,37 @@ import (
 )
 
 // ElementClickInput specifies the input parameters for simulating a click on an element.
-// StepDuration sets the duration to wait between each step of the click process:
-// 1) move to the element
-// 2) mouse press
-// 3) mouse release
-// HoldDuration specifies the duration to wait between mousePress and mouseRelease.
-// If not set, it defaults to StepDuration.
+// - StepDuration: Duration to wait between each step of the click process: moving to the element, mouse press, and mouse release.
+// - HoldDuration: Duration to wait between mouse press and mouse release. Defaults to StepDuration if not set.
 type ElementClickInput struct {
 	StepDuration time.Duration // Duration for each step of the click action.
 	HoldDuration time.Duration // Duration to hold the mouse press before releasing.
 }
 
 // ElementClickOutput represents the output of a click action.
-// It returns the X and Y coordinates where the click occurred.
+// It provides the X and Y coordinates where the click occurred.
 type ElementClickOutput struct {
 	X float64 `json:"x"` // X coordinate of the click position.
 	Y float64 `json:"y"` // Y coordinate of the click position.
 }
 
-// Click simulates a click on the element.
-// It receives a context and an ElementClickInput as parameters.
-// Returns an ElementClickOutput with the click coordinates or an error if the click action fails.
+// Click simulates a mouse click on the element.
+// It calculates the center of the element and executes a mouse click at the center.
 func (e *element) Click(ctx context.Context, in *ElementClickInput) (*ElementClickOutput, error) {
 	rect, err := e.GetRect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Move the mouse to the element's position.
+	// Calculate the center coordinates of the element for the click action.
+	centerX := rect.X + rect.Width/2
+	centerY := rect.Y + rect.Height/2
+
+	// Move the mouse to the center of the element.
 	err = e.client.Input.DispatchMouseEvent(ctx, &input.DispatchMouseEventArgs{
 		Type: "mouseMoved",
-		X:    rect.X,
-		Y:    rect.Y,
+		X:    centerX,
+		Y:    centerY,
 	})
 	if err != nil {
 		return nil, err
@@ -52,37 +51,37 @@ func (e *element) Click(ctx context.Context, in *ElementClickInput) (*ElementCli
 
 	clientCount := 1
 
-	// Press the mouse button.
+	// Press the mouse button at the center of the element.
 	err = e.client.Input.DispatchMouseEvent(ctx, &input.DispatchMouseEventArgs{
 		Type:       "mousePressed",
 		Button:     input.MouseButtonLeft,
-		X:          rect.X,
-		Y:          rect.Y,
+		X:          centerX,
+		Y:          centerY,
 		ClickCount: &clientCount,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Wait for HoldDuration or StepDuration before releasing the mouse button.
+	// Wait for HoldDuration or default to StepDuration before releasing the mouse button.
 	if in.HoldDuration > 0 {
 		time.Sleep(in.HoldDuration)
 	} else if in.StepDuration > 0 {
 		time.Sleep(in.StepDuration)
 	}
 
-	// Release the mouse button.
+	// Release the mouse button at the center of the element.
 	err = e.client.Input.DispatchMouseEvent(ctx, &input.DispatchMouseEventArgs{
 		Type:       "mouseReleased",
 		Button:     input.MouseButtonLeft,
-		X:          rect.X,
-		Y:          rect.Y,
+		X:          centerX,
+		Y:          centerY,
 		ClickCount: &clientCount,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Return the coordinates of the click.
-	return &ElementClickOutput{X: rect.X, Y: rect.Y}, nil
+	// Return the coordinates where the click was performed.
+	return &ElementClickOutput{X: centerX, Y: centerY}, nil
 }

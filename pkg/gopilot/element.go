@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/mafredri/cdp"
-	"github.com/mafredri/cdp/devtool"
 	"github.com/mafredri/cdp/protocol/dom"
 )
 
@@ -15,6 +14,11 @@ type Element interface {
 	// Returns an ElementClickOutput with the result or an error if the click fails.
 	Click(ctx context.Context, in *ElementClickInput) (*ElementClickOutput, error)
 
+	// ScrollIntoView performs an action to scroll the element into the viewport.
+	// Accepts an ElementScrollIntoViewInput with scroll parameters.
+	// Returns an ElementScrollIntoViewOutput or an error if the action fails.
+	ScrollIntoView(ctx context.Context, in *ElementScrollIntoViewInput) (*ElementScrollIntoViewOutput, error)
+
 	// GetRect retrieves the bounding rectangle of the element.
 	// Returns a BoundingRect containing the dimensions and position of the element or an error if retrieval fails.
 	GetRect(ctx context.Context) (*BoundingRect, error)
@@ -22,18 +26,16 @@ type Element interface {
 
 // element is an implementation of the Element interface.
 type element struct {
-	node   dom.Node          // The DOM node representing the element.
-	tools  *devtool.DevTools // The DevTools instance for interacting with the browser.
-	client *cdp.Client       // The CDP client for communication with the Chromium instance.
+	node   dom.Node    // The DOM node representing the element.
+	client *cdp.Client // The CDP client for communication with the Chromium instance.
 }
 
 // newElement creates a new Element instance.
 // It takes a DOM node, DevTools instance, and CDP client as parameters.
 // Returns a new Element implementation.
-func newElement(node dom.Node, tools *devtool.DevTools, client *cdp.Client) Element {
+func newElement(node dom.Node, client *cdp.Client) Element {
 	return &element{
 		node:   node,
-		tools:  tools,
 		client: client,
 	}
 }

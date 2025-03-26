@@ -58,6 +58,6 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 	}
 
 	return &PageQuerySelectorOutput{
-		Element: newElement(drp.Node, p.devtool, p.client),
+		Element: newElement(drp.Node, p.client),
 	}, nil
 }

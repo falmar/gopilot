@@ -45,16 +45,14 @@ type xhrMonitor struct {
 
 // Listen starts listening for XHR events that match the given patterns.
 func (m *xhrMonitor) Listen(ctx context.Context, patterns []string) (chan *XHREvent, error) {
-	p := m.p.(*page)
-
 	// Enable fetch interception for capturing network requests.
-	err := p.EnableFetch(ctx)
+	err := m.p.EnableFetch(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	hasPatterns := len(patterns) > 0
-	m.cbHandle = p.AddInterceptRequest(ctx, InterceptRequestCallback(func(ctx context.Context, rp *fetch.RequestPausedReply) error {
+	m.cbHandle = m.p.AddInterceptRequest(ctx, InterceptRequestCallback(func(ctx context.Context, rp *fetch.RequestPausedReply) error {
 		// Filter out non-XHR and non-fetch requests.
 		if rp.ResourceType != network.ResourceTypeFetch && rp.ResourceType != network.ResourceTypeXHR {
 			return nil
@@ -82,7 +80,7 @@ func (m *xhrMonitor) Listen(ctx context.Context, patterns []string) (chan *XHREv
 		}
 
 		// Fetch the response body.
-		rb, err := p.client.Fetch.GetResponseBody(ctx, &fetch.GetResponseBodyArgs{RequestID: rp.RequestID})
+		rb, err := m.p.(*page).client.Fetch.GetResponseBody(ctx, &fetch.GetResponseBodyArgs{RequestID: rp.RequestID})
 		ev := &XHREvent{
 			URL:   rp.Request.URL,
 			Error: err,
@@ -104,7 +102,6 @@ func (m *xhrMonitor) Listen(ctx context.Context, patterns []string) (chan *XHREv
 
 // Stop stops monitoring XHR requests.
 func (m *xhrMonitor) Stop(ctx context.Context) error {
-	p := m.p.(*page)
-	p.RemoveInterceptRequest(ctx, m.cbHandle)
+	m.p.RemoveInterceptRequest(ctx, m.cbHandle)
 	return nil
 }

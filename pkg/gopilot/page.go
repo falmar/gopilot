@@ -2,6 +2,7 @@ package gopilot
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"sync"
 
@@ -10,8 +11,6 @@ import (
 	"github.com/mafredri/cdp/protocol/fetch"
 	"github.com/mafredri/cdp/protocol/runtime"
 	"github.com/mafredri/cdp/rpcc"
-
-	cdpdevtool "github.com/mafredri/cdp/devtool"
 )
 
 // Page represents a web page in the browser.
@@ -71,13 +70,13 @@ type Page interface {
 }
 
 type page struct {
-	devtool *devtool.DevTools
-	target  *devtool.Target
-	conn    *rpcc.Conn
-	client  *cdp.Client
-	logger  *slog.Logger
-	mux     sync.RWMutex
-	closed  bool
+	id     string
+	target *devtool.Target
+	conn   *rpcc.Conn
+	client *cdp.Client
+	logger *slog.Logger
+	mux    sync.RWMutex
+	closed bool
 
 	fetchEnabled      bool
 	interceptClient   fetch.RequestPausedClient
@@ -88,26 +87,11 @@ type page struct {
 // It initializes connection and protocol client, and enables page events.
 func newPage(
 	ctx context.Context,
-	devtool *devtool.DevTools,
+	t *devtool.Target,
 	logger *slog.Logger,
-	newTab bool,
 ) (Page, error) {
-	logger.Debug("creating new page cdp target")
-
-	var target *cdpdevtool.Target
-	var err error
-
-	if newTab {
-		target, err = devtool.Create(ctx)
-	} else {
-		target, err = devtool.Get(ctx, cdpdevtool.Page)
-	}
-	if err != nil {
-		return nil, err
-	}
-
 	logger.Debug("creating rpc conn")
-	conn, err := rpcc.DialContext(ctx, target.WebSocketDebuggerURL)
+	conn, err := rpcc.DialContext(ctx, t.WebSocketDebuggerURL)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +99,9 @@ func newPage(
 	logger.Debug("creating protocol client")
 	client := cdp.NewClient(conn)
 	p := &page{
-		devtool:           devtool,
+		id:                t.ID,
 		client:            client,
-		target:            target,
+		target:            t,
 		conn:              conn,
 		logger:            logger,
 		mux:               sync.RWMutex{},
@@ -158,7 +142,7 @@ type PageEvaluateInput struct {
 
 // PageEvaluateOutput represents the output of the Evaluate method.
 type PageEvaluateOutput struct {
-	Value []byte
+	Value json.RawMessage
 }
 
 // Evaluate executes the given JavaScript expression on the page.

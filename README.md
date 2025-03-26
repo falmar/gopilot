@@ -35,7 +35,7 @@ Overall, gopilot aims to be a lightweight tool that doesn’t bog you down with 
 - **Query Selector** to find elements on the page
 - **Click** on elements
 - **Extract** HTML content from the page
-- **Intercept** network requests for those who want to dig deeper
+- **Intercept** (Needs rework in order to allow modifying the request) network requests for those who want to dig deeper
 - **Set**, **get**, and **clear** cookies
 
 ## Basic Usage Example

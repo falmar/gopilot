@@ -10,10 +10,10 @@ import (
 
 // XHREvent represents an XHR event with related information.
 type XHREvent struct {
-	URL    string // The URL that was requested
-	Body   string // The body of the response
-	Base64 bool   // Indicates if the response body is Base64 encoded
-	Error  error  // Error encountered during the request (if any)
+	URL    string `json:"url"`    // The URL that was requested
+	Body   string `json:"body"`   // The body of the response
+	Base64 bool   `json:"base64"` // Indicates if the response body is Base64 encoded
+	Error  error  `json:"-"`      // Error encountered during the request (if any)
 }
 
 // XHRMonitor is an interface for monitoring XHR requests.

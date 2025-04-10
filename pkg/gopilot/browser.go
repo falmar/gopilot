@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -38,6 +39,11 @@ type Browser interface {
 	// Close shuts down the browser instance and cleans up any resources.
 	// It takes a context and returns an error if the browser fails to close.
 	Close(ctx context.Context) error
+
+	// GetDevToolClient retrieves the DevTools client associated with the browser.
+	// This client allows for advanced interactions with the browser's DevTools protocol,
+	// enabling custom actions and low-level debugging or profiling features.
+	GetDevToolClient() *devtool.DevTools
 }
 
 type browser struct {
@@ -77,9 +83,17 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	b.instance.Env = b.config.Envs
 	b.instance.Args = append(
 		b.config.Args,
-		fmt.Sprintf("--remote-debugging-port=%s", b.config.DebugPort),
 		fmt.Sprintf("--user-data-dir=%s", tempDir),
 	)
+
+	// TODO: check if debug port is already in use (when unset)
+	// in order to use next one incrementally
+	if b.config.DebugPort != "" {
+		b.instance.Args = append(
+			b.instance.Args,
+			fmt.Sprintf("--remote-debugging-port=%s", b.config.DebugPort),
+		)
+	}
 
 	// Handle stderr to capture DevTools URL
 	dtChan := make(chan string)
@@ -112,7 +126,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 
 	// Wait for the DevTools URL message or timeout
 	waitDuration := time.Second * 5
-	var devtoolsURL string
+	var devtoolsURLString string
 	select {
 	case err := <-b.waitChan:
 		return fmt.Errorf("exec wait exited unexpectedly or too soon: %w", err)
@@ -125,11 +139,15 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		if len(dtSplit) < 2 {
 			return errors.New("unable to obtain dev tool url")
 		}
-		devtoolsURL = dtSplit[1]
+		devtoolsURLString = strings.TrimSpace(dtSplit[1])
+	}
+	devtoolURL, err := url.Parse(devtoolsURLString)
+	if err != nil {
+		return err
 	}
 
-	b.logger.Debug("creating devtool", "url", devtoolsURL)
-	b.devtool = devtool.New(fmt.Sprintf("http://127.0.0.1:%s", b.config.DebugPort))
+	b.logger.Debug("creating devtool", "url", devtoolsURLString)
+	b.devtool = devtool.New(fmt.Sprintf("http://127.0.0.1:%s", devtoolURL.Port()))
 
 	return nil
 }
@@ -270,4 +288,11 @@ func (b *browser) Close(ctx context.Context) error {
 	}()
 
 	return <-b.waitChan
+}
+
+// GetDevToolClient retrieves the DevTools client associated with the browser.
+// This client allows for advanced interactions with the browser's DevTools protocol,
+// enabling custom actions and low-level debugging or profiling features.
+func (b *browser) GetDevToolClient() *devtool.DevTools {
+	return b.devtool
 }

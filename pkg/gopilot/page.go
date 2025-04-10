@@ -67,6 +67,15 @@ type Page interface {
 	// ClearCookies clears cookies for the current page.
 	// Takes a ClearCookiesInput and returns ClearCookiesOutput or an error.
 	ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error)
+
+	// GetTargetID returns the unique identifier for the page's target.
+	// This ID can be used to distinguish different pages or targets in the browser.
+	GetTargetID() string
+
+	// GetCDPClient retrieves the Chrome DevTools Protocol (CDP) client associated with the page.
+	// The CDP client allows for direct communication with the browser's protocol.
+	// This is useful for performing low-level operations and custom actions not exposed by higher-level methods.
+	GetCDPClient() *cdp.Client
 }
 
 type page struct {
@@ -167,4 +176,17 @@ func (p *page) Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvalua
 	}
 
 	return out, nil
+}
+
+// GetTargetID returns the unique identifier for the page's target.
+// This ID can be used to distinguish different pages or targets in the browser.
+func (p *page) GetTargetID() string {
+	return p.id
+}
+
+// GetCDPClient retrieves the Chrome DevTools Protocol (CDP) client associated with the page.
+// The CDP client allows for direct communication with the browser's protocol.
+// This is useful for performing low-level operations and custom actions not exposed by higher-level methods.
+func (p *page) GetCDPClient() *cdp.Client {
+	return p.client
 }

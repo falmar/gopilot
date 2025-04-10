@@ -45,8 +45,12 @@ func main() {
 		return
 	}
 
-	out, err := page.QuerySelector(ctx, &gopilot.PageQuerySelectorInput{
+	time.Sleep(time.Second * 2)
+
+	// or use page.QuerySelector
+	out, err := page.Search(ctx, &gopilot.PageSearchInput{
 		Selector: "button#L2AGLb",
+		Pierce:   true,
 	})
 	if err != nil {
 		logger.Error("unable to query selector", "error", err)

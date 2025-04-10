@@ -2,9 +2,12 @@ package gopilot
 
 import (
 	"context"
+	"errors"
 
 	"github.com/mafredri/cdp/protocol/dom"
 )
+
+var ErrElementNotFound = errors.New("element not found")
 
 // GetContent retrieves the HTML content of the current page.
 // It returns the outer HTML as a string or an error if retrieval fails.
@@ -50,6 +53,10 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 		return nil, err
 	}
 
+	if qrp.NodeID == 0 {
+		return nil, ErrElementNotFound
+	}
+
 	drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
 		NodeID: &qrp.NodeID,
 	})
@@ -65,6 +72,74 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 	}
 
 	return &PageQuerySelectorOutput{
+		Element: newElement(drp.Node, rrp.Object, p.client),
+	}, nil
+}
+
+// PageSearchInput contains the selector string for querying elements.
+type PageSearchInput struct {
+	Selector string
+	Pierce   bool
+}
+
+// PageSearchOutput contains the Element found by the query.
+type PageSearchOutput struct {
+	Element Element
+}
+
+func (p *page) Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error) {
+	_, err := p.client.DOM.GetDocument(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	qsrp, err := p.client.DOM.PerformSearch(ctx, &dom.PerformSearchArgs{
+		Query:                     in.Selector,
+		IncludeUserAgentShadowDOM: &in.Pierce,
+	})
+	if err != nil {
+		return nil, err
+	} else if qsrp.ResultCount <= 0 {
+		return nil, ErrElementNotFound
+	}
+
+	srp, err := p.client.DOM.GetSearchResults(ctx, &dom.GetSearchResultsArgs{
+		SearchID:  qsrp.SearchID,
+		FromIndex: 0,
+		ToIndex:   qsrp.ResultCount,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var firstMatch dom.NodeID = 0
+
+	for _, id := range srp.NodeIDs {
+		if id != 0 {
+			firstMatch = id
+			break
+		}
+	}
+
+	if firstMatch == 0 {
+		return nil, ErrElementNotFound
+	}
+
+	drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
+		NodeID: &firstMatch,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	rrp, err := p.client.DOM.ResolveNode(ctx, &dom.ResolveNodeArgs{
+		NodeID: &drp.Node.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &PageSearchOutput{
 		Element: newElement(drp.Node, rrp.Object, p.client),
 	}, nil
 }

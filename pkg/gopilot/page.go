@@ -56,6 +56,10 @@ type Page interface {
 	// Takes a PageQuerySelectorInput and returns a PageQuerySelectorOutput or an error.
 	QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error)
 
+	// Search finds a element matching the text, query selector or xpath
+	// Takes a PageSearchInput and returns a PageSearchOutput or an error.
+	Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
+
 	// GetCookies retrieves cookies for the current page.
 	// Takes a GetCookiesInput and returns GetCookiesOutput or an error.
 	GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookiesOutput, error)

@@ -57,7 +57,14 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 		return nil, err
 	}
 
+	rrp, err := p.client.DOM.ResolveNode(ctx, &dom.ResolveNodeArgs{
+		NodeID: &qrp.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &PageQuerySelectorOutput{
-		Element: newElement(drp.Node, p.client),
+		Element: newElement(drp.Node, rrp.Object, p.client),
 	}, nil
 }

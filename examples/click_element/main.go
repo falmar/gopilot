@@ -53,6 +53,14 @@ func main() {
 		return
 	}
 
+	textContent, err := out.Element.Text(ctx)
+	if err != nil {
+		logger.Error("unable to get text", "error", err)
+		return
+	}
+	logger.Info("button text", "text", textContent)
+	time.Sleep(time.Second * 1)
+
 	clickOut, err := out.Element.Click(ctx, &gopilot.ElementClickInput{
 		StepDuration: time.Millisecond * 300,
 	})
@@ -66,6 +74,6 @@ func main() {
 	select {
 	case <-ctx.Done():
 		return
-	case <-time.After(time.Second * 60):
+	case <-time.After(time.Second * 5):
 	}
 }

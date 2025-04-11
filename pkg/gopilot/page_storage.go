@@ -28,7 +28,7 @@ type GetCookiesInput struct{}
 // GetCookiesOutput contains the cookies retrieved from the browser.
 // It returns a list of cookies.
 type GetCookiesOutput struct {
-	Cookies []*PageCookie // List of cookies.
+	Cookies []PageCookie // List of cookies.
 }
 
 // GetCookies retrieves all cookies for the current page.
@@ -39,9 +39,9 @@ func (p *page) GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookies
 		return nil, err
 	}
 
-	var cookies []*PageCookie
+	var cookies []PageCookie
 	for _, c := range rp.Cookies {
-		pc := &PageCookie{
+		pc := PageCookie{
 			Name:     c.Name,
 			Value:    c.Value,
 			Domain:   c.Domain, // Corrected to use Domain from cookie
@@ -65,7 +65,7 @@ func (p *page) GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookies
 // SetCookiesInput specifies the input for the SetCookies method.
 // It contains a list of cookies to set in the browser.
 type SetCookiesInput struct {
-	Cookies []*PageCookie // List of cookies to set.
+	Cookies []PageCookie // List of cookies to set.
 }
 
 // SetCookiesOutput is returned after setting cookies successfully.
@@ -108,7 +108,7 @@ func (p *page) SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookies
 // ClearCookiesInput specifies the input for the ClearCookies method.
 // It can include specific cookies to clear, but here it's currently set up to clear all cookies.
 type ClearCookiesInput struct {
-	Cookies *PageCookie // The cookie to clear (currently not used in the implementation).
+	Cookies PageCookie // The cookie to clear (currently not used in the implementation).
 }
 
 // ClearCookiesOutput is returned after clearing cookies successfully.

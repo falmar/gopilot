@@ -43,7 +43,7 @@ func main() {
 
 	// SET COOKIES (avoid set cookie pop up)
 	_, err = page.SetCookies(ctx, &gopilot.SetCookiesInput{
-		Cookies: []*gopilot.PageCookie{
+		Cookies: []gopilot.PageCookie{
 			{
 				Domain:   ".google.com",
 				Name:     "SOCS",

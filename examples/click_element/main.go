@@ -38,7 +38,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	if _, err := page.Navigate(ctx, &gopilot.PageNavigateInput{
-		URL:                "https://www.google.com",
+		URL:                "https://cps-check.com/mouse-buttons-test",
 		WaitDomContentLoad: true,
 	}); err != nil {
 		logger.Error("unable to navigate", "error", err)
@@ -49,7 +49,7 @@ func main() {
 
 	// or use page.QuerySelector
 	out, err := page.Search(ctx, &gopilot.PageSearchInput{
-		Selector: "button#L2AGLb",
+		Selector: "#mouse-container",
 		Pierce:   true,
 	})
 	if err != nil {
@@ -57,27 +57,54 @@ func main() {
 		return
 	}
 
-	textContent, err := out.Element.Text(ctx)
-	if err != nil {
-		logger.Error("unable to get text", "error", err)
-		return
-	}
-	logger.Info("button text", "text", textContent)
-	time.Sleep(time.Second * 1)
-
+	// EXAMPLE SIMPLE CLICK
 	clickOut, err := out.Element.Click(ctx, &gopilot.ElementClickInput{
 		StepDuration: time.Millisecond * 300,
 	})
 	if err != nil {
-		logger.Error("unable to get rect", "error", err)
+		logger.Error("unable to click", "error", err)
 		return
 	}
-
 	logger.Info("clicked element in position", "x", clickOut.X, "y", clickOut.Y)
 
 	select {
 	case <-ctx.Done():
 		return
-	case <-time.After(time.Second * 5):
+	case <-time.After(time.Second * 3):
 	}
+
+	// EXAMPLE HOLD CLICK
+	holdDuration := time.Second * 5
+	logger.Info("clicking and holding", "duration", holdDuration)
+	clickOut, err = out.Element.Click(ctx, &gopilot.ElementClickInput{
+		HoldDuration: holdDuration,
+	})
+	if err != nil {
+		logger.Error("unable to click", "error", err)
+		return
+	}
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(time.Second * 2):
+	}
+
+	// EXAMPLE HOLD CLICK WITH USER RELEASE
+	releaseDuration := time.Second * 5
+	logger.Info("clicking and holding with release handle", "duration", releaseDuration)
+	clickOut, err = out.Element.Click(ctx, &gopilot.ElementClickInput{
+		ReturnHoldRelease: true,
+	})
+	if err != nil {
+		logger.Error("unable to click", "error", err)
+		return
+	}
+
+	time.Sleep(releaseDuration)
+	if err = clickOut.Release(); err != nil {
+		logger.Error("release handle error", "error", err)
+		return
+	}
+
+	logger.Info("done")
 }

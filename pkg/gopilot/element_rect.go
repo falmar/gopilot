@@ -25,6 +25,10 @@ type BoundingRect struct {
 	Width float64 `json:"width"`
 	// Height is the height of the element.
 	Height float64 `json:"height"`
+	// CenterX is the centered position on x-axis
+	CenterX float64
+	// CenterY is the centered position on y-axis
+	CenterY float64
 }
 
 // GetRect retrieves the bounding rectangle of the element.
@@ -47,7 +51,7 @@ func (e *element) GetRect(ctx context.Context) (*BoundingRect, error) {
 
 	quad := qrp.Quads[0]
 
-	return &BoundingRect{
+	rect := &BoundingRect{
 		Left:   quad[0],
 		Top:    quad[1],
 		Right:  quad[2],
@@ -56,5 +60,11 @@ func (e *element) GetRect(ctx context.Context) (*BoundingRect, error) {
 		Y:      quad[1],
 		Width:  float64(brp.Model.Width),
 		Height: float64(brp.Model.Height),
-	}, nil
+	}
+
+	// Calculate the center coordinates of the element for the click action.
+	rect.CenterX = rect.X + rect.Width/2
+	rect.CenterY = rect.Y + rect.Height/2
+
+	return rect, nil
 }

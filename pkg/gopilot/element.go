@@ -20,11 +20,18 @@ type Element interface {
 	// Returns an ElementScrollIntoViewOutput or an error if the action fails.
 	ScrollIntoView(ctx context.Context, in *ElementScrollIntoViewInput) (*ElementScrollIntoViewOutput, error)
 
-	// Text get element's textContent
+	// Text retrieves the element's text content.
 	Text(ctx context.Context) (string, error)
 
+	// Focus sets focus on the element, allowing it to receive input.
+	// Returns an error if the action fails.
+	Focus(ctx context.Context) error
+
+	// Remove the element from the DOM tree
+	Remove(ctx context.Context) error
+
 	// GetRect retrieves the bounding rectangle of the element.
-	// Returns a BoundingRect containing the dimensions and position of the element or an error if retrieval fails.
+	// Returns a BoundingRect containing the dimensions and position of the element, or an error if retrieval fails.
 	GetRect(ctx context.Context) (*BoundingRect, error)
 }
 

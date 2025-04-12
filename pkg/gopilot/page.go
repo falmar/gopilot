@@ -56,7 +56,7 @@ type Page interface {
 	// Takes a PageQuerySelectorInput and returns a PageQuerySelectorOutput or an error.
 	QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error)
 
-	// Search finds a element matching the text, query selector or xpath
+	// Search finds an element matching the text, query selector or xpath
 	// Takes a PageSearchInput and returns a PageSearchOutput or an error.
 	Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
 
@@ -71,6 +71,11 @@ type Page interface {
 	// ClearCookies clears cookies for the current page.
 	// Takes a ClearCookiesInput and returns ClearCookiesOutput or an error.
 	ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error)
+
+	// TypeText sends a sequence of keystrokes to the element as if typed by a user.
+	// Accepts an ElementTypeInput containing the text to type.
+	// Returns an ElementTypeOutput with the result or an error if typing fails.
+	TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTextOutput, error)
 
 	// GetTargetID returns the unique identifier for the page's target.
 	// This ID can be used to distinguish different pages or targets in the browser.

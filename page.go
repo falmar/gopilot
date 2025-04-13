@@ -2,19 +2,20 @@ package gopilot
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"sync"
 
 	"github.com/mafredri/cdp"
 	"github.com/mafredri/cdp/devtool"
 	"github.com/mafredri/cdp/protocol/fetch"
-	"github.com/mafredri/cdp/protocol/runtime"
 	"github.com/mafredri/cdp/rpcc"
 )
 
 // Page represents a web page in the browser.
 type Page interface {
+	// Activate brings page to front
+	Activate(ctx context.Context) error
+
 	// Navigate navigates the page to the specified URL.
 	// The input is a PageNavigateInput containing the URL to navigate to.
 	// It returns a PageNavigateOutput or an error if the navigation fails.
@@ -162,40 +163,8 @@ func (p *page) Close(ctx context.Context) error {
 	return nil
 }
 
-// PageEvaluateInput specifies input for the Evaluate method.
-type PageEvaluateInput struct {
-	AwaitPromise bool
-	ReturnValue  bool
-	Expression   string
-}
-
-// PageEvaluateOutput represents the output of the Evaluate method.
-type PageEvaluateOutput struct {
-	Value json.RawMessage
-}
-
-// Evaluate executes the given JavaScript expression on the page.
-func (p *page) Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvaluateOutput, error) {
-	userGesture := true
-	allowUnsafe := true
-
-	res, err := p.client.Runtime.Evaluate(ctx, &runtime.EvaluateArgs{
-		Expression:                  in.Expression,
-		UserGesture:                 &userGesture,
-		ReturnByValue:               &in.ReturnValue,
-		AwaitPromise:                &in.AwaitPromise,
-		AllowUnsafeEvalBlockedByCSP: &allowUnsafe,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	out := &PageEvaluateOutput{}
-	if in.ReturnValue {
-		out.Value = res.Result.Value
-	}
-
-	return out, nil
+func (p *page) Activate(ctx context.Context) error {
+	return p.client.Page.BringToFront(ctx)
 }
 
 // GetTargetID returns the unique identifier for the page's target.

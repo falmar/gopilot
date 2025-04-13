@@ -27,12 +27,18 @@ type Element interface {
 	// Returns an error if the action fails.
 	Focus(ctx context.Context) error
 
-	// Remove the element from the DOM tree
-	Remove(ctx context.Context) error
-
 	// GetRect retrieves the bounding rectangle of the element.
 	// Returns a BoundingRect containing the dimensions and position of the element, or an error if retrieval fails.
 	GetRect(ctx context.Context) (*BoundingRect, error)
+
+	// TakeScreenshot captures a screenshot of the element.
+	// It uses the element's position and size to define the capture area.
+	// Input parameters can specify the format of the image.
+	// Returns the screenshot data as base64 encoded bytes or an error if the capture fails.
+	TakeScreenshot(ctx context.Context, in *ElementTakeScreenshotInput) (*ElementTakeScreenshotOutput, error)
+
+	// Remove the element from the DOM tree
+	Remove(ctx context.Context) error
 }
 
 // element is an implementation of the Element interface.

@@ -77,6 +77,12 @@ type Page interface {
 	// Returns an ElementTypeOutput with the result or an error if typing fails.
 	TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTextOutput, error)
 
+	// TakeScreenshot captures a screenshot of the page.
+	// You can choose to capture the entire page or just the visible viewport.
+	// Input parameters allow you to specify the image format and capture area.
+	// Returns the base64 encoded screenshot data or an error if the capture fails.
+	TakeScreenshot(ctx context.Context, in *PageTakeScreenshotInput) (*PageTakeScreenshotOutput, error)
+
 	// GetTargetID returns the unique identifier for the page's target.
 	// This ID can be used to distinguish different pages or targets in the browser.
 	GetTargetID() string

@@ -21,14 +21,14 @@ type PageTakeScreenshotInput struct {
 
 // PageTakeScreenshotOutput represents the output of the TakeScreenshot method for a page.
 type PageTakeScreenshotOutput struct {
-	// Data contains the base64 encoded screenshot image data.
+	// Data contains the screenshot image data.
 	Data []byte
 }
 
 // TakeScreenshot captures a screenshot of the page.
 // You can choose to capture the entire page or just the visible viewport.
 // Input parameters allow you to specify the image format and capture area.
-// Returns the base64 encoded screenshot data or an error if the capture fails.
+// Returns the encoded screenshot data or an error if the capture fails.
 func (p *page) TakeScreenshot(ctx context.Context, in *PageTakeScreenshotInput) (*PageTakeScreenshotOutput, error) {
 	format := in.Format
 	if format == "" {

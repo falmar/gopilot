@@ -2,13 +2,36 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/falmar/gopilot"
 )
+
+var pageExampleHTML string = `
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IMAGE_TYPE Screenshot</title>
+    <style>
+        img {
+            max-width: 90%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+<h1>IMAGE_TYPE screenshot:</h1>
+<img src="data:image/png;base64,BASE64_IMAGE_DATA" alt="Screenshot">
+</body>
+</html>
+`
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -45,7 +68,7 @@ func main() {
 		return
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(time.Second * 2)
 
 	screenshotOut, err := page.TakeScreenshot(ctx, &gopilot.PageTakeScreenshotInput{
 		Format: "png",
@@ -73,27 +96,39 @@ func main() {
 		return
 	}
 
-	if err = saveScreenshot("./gopilot_screenshot_fullpage.png", screenshotOut.Data); err != nil {
-		logger.Error("unable to save fullpage screenshot")
-		return
-	}
+	time.Sleep(time.Second * 2)
 
-	if err = saveScreenshot("./gopilot_screenshot_details.png", elScreenshotOut.Data); err != nil {
-		logger.Error("unable to save details screenshot")
-		return
-	}
-}
-
-func saveScreenshot(path string, data []byte) error {
-	f, err := os.Create(path)
+	pageDisplayScreenshot, err := b.NewPage(ctx, &gopilot.BrowserNewPageInput{
+		NewTab: true,
+	})
 	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if _, err = f.Write(data); err != nil {
-		return err
+		logger.Error("unable to open page for example", "error", err)
+		return
 	}
 
-	return f.Sync()
+	pageContent := strings.Replace(pageExampleHTML, "IMAGE_TYPE", "Full page", -1)
+	pageContent = strings.Replace(pageContent,
+		"BASE64_IMAGE_DATA",
+		base64.RawStdEncoding.EncodeToString(screenshotOut.Data),
+		-1)
+	err = pageDisplayScreenshot.Page.SetContent(ctx, pageContent)
+	if err != nil {
+		logger.Error("unable to open page for example", "error", err)
+		return
+	}
+
+	time.Sleep(time.Second * 2)
+
+	pageContent = strings.Replace(pageExampleHTML, "IMAGE_TYPE", "Details section", -1)
+	pageContent = strings.Replace(pageContent,
+		"BASE64_IMAGE_DATA",
+		base64.RawStdEncoding.EncodeToString(elScreenshotOut.Data),
+		-1)
+	err = pageDisplayScreenshot.Page.SetContent(ctx, pageContent)
+	if err != nil {
+		logger.Error("unable to open page for example", "error", err)
+		return
+	}
+
+	time.Sleep(time.Second * 5)
 }

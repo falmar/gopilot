@@ -27,6 +27,19 @@ func (p *page) GetContent(ctx context.Context) (string, error) {
 	return rp.OuterHTML, nil
 }
 
+// SetContent replaces the current DOM with supplied content
+func (p *page) SetContent(ctx context.Context, content string) error {
+	doc, err := p.client.DOM.GetDocument(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	return p.client.DOM.SetOuterHTML(ctx, &dom.SetOuterHTMLArgs{
+		NodeID:    doc.Root.NodeID,
+		OuterHTML: content,
+	})
+}
+
 // PageQuerySelectorInput contains the selector string for querying elements.
 type PageQuerySelectorInput struct {
 	Selector string

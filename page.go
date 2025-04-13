@@ -28,6 +28,9 @@ type Page interface {
 	// Returns the content or an error if retrieving fails.
 	GetContent(ctx context.Context) (string, error)
 
+	// SetContent replaces the current DOM with supplied content
+	SetContent(ctx context.Context, content string) error
+
 	// Close closes the page.
 	// Returns an error if closing the page fails.
 	Close(ctx context.Context) error
@@ -80,7 +83,7 @@ type Page interface {
 	// TakeScreenshot captures a screenshot of the page.
 	// You can choose to capture the entire page or just the visible viewport.
 	// Input parameters allow you to specify the image format and capture area.
-	// Returns the base64 encoded screenshot data or an error if the capture fails.
+	// Returns the screenshot data or an error if the capture fails.
 	TakeScreenshot(ctx context.Context, in *PageTakeScreenshotInput) (*PageTakeScreenshotOutput, error)
 
 	// GetTargetID returns the unique identifier for the page's target.
@@ -115,7 +118,9 @@ func newPage(
 	logger *slog.Logger,
 ) (Page, error) {
 	logger.Debug("creating rpc conn")
-	conn, err := rpcc.DialContext(ctx, t.WebSocketDebuggerURL)
+	conn, err := rpcc.DialContext(ctx, t.WebSocketDebuggerURL,
+		rpcc.WithWriteBufferSize(1024*1024*5), // 5mb
+		rpcc.WithCompression())
 	if err != nil {
 		return nil, err
 	}

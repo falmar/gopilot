@@ -34,7 +34,7 @@ type Element interface {
 	// TakeScreenshot captures a screenshot of the element.
 	// It uses the element's position and size to define the capture area.
 	// Input parameters can specify the format of the image.
-	// Returns the screenshot data as base64 encoded bytes or an error if the capture fails.
+	// Returns the screenshot data as bytes or an error if the capture fails.
 	TakeScreenshot(ctx context.Context, in *ElementTakeScreenshotInput) (*ElementTakeScreenshotOutput, error)
 
 	// Remove the element from the DOM tree

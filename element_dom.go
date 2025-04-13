@@ -18,7 +18,7 @@ func (e *element) Focus(ctx context.Context) error {
 
 func (e *element) Text(ctx context.Context) (string, error) {
 	returnByValue := true
-	cfrp, err := e.client.Runtime.CallFunctionOn(ctx, &runtime.CallFunctionOnArgs{
+	rp, err := e.client.Runtime.CallFunctionOn(ctx, &runtime.CallFunctionOnArgs{
 		ObjectID:            e.remoteObj.ObjectID,
 		ReturnByValue:       &returnByValue,
 		FunctionDeclaration: `function() { return this.textContent; }`,
@@ -29,7 +29,7 @@ func (e *element) Text(ctx context.Context) (string, error) {
 
 	var elementText string
 
-	err = json.Unmarshal(cfrp.Result.Value, &elementText)
+	err = json.Unmarshal(rp.Result.Value, &elementText)
 	if err != nil {
 		return "", err
 	}

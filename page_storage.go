@@ -20,7 +20,7 @@ type PageStorage interface {
 	SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookiesOutput, error)
 
 	// ClearCookies clears cookies for the current page.
-	ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error)
+	ClearCookies(ctx context.Context) error
 
 	GetLocalStorage(ctx context.Context, in *GetLocalStorageInput) (*GetLocalStorageOutput, error)
 	SetLocalStorage(ctx context.Context, in *SetLocalStorageInput) (*SetLocalStorageOutput, error)
@@ -124,15 +124,9 @@ func (p *page) SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookies
 	return &SetCookiesOutput{}, nil
 }
 
-// ClearCookiesInput specifies the input for the ClearCookies method.
-type ClearCookiesInput struct{}
-
-// ClearCookiesOutput is returned after clearing cookies successfully.
-type ClearCookiesOutput struct{}
-
 // ClearCookies clears all cookies from the browser.
-func (p *page) ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error) {
-	return &ClearCookiesOutput{}, p.client.Storage.ClearCookies(ctx, &storage.ClearCookiesArgs{})
+func (p *page) ClearCookies(ctx context.Context) error {
+	return p.client.Storage.ClearCookies(ctx, &storage.ClearCookiesArgs{})
 }
 
 type LocalStorageItem struct {

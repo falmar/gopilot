@@ -2,12 +2,15 @@ package gopilot
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"net/url"
 	"sync"
 
 	"github.com/mafredri/cdp"
 	"github.com/mafredri/cdp/devtool"
 	"github.com/mafredri/cdp/protocol/fetch"
+	"github.com/mafredri/cdp/protocol/runtime"
 	"github.com/mafredri/cdp/rpcc"
 )
 
@@ -90,6 +93,32 @@ func newPage(
 	}
 
 	return p, nil
+}
+
+func getPageCurrentURL(ctx context.Context, p *page) (*url.URL, error) {
+	// TODO: listen for target url changes
+
+	rValue := true
+	rp, err := p.client.Runtime.Evaluate(ctx, &runtime.EvaluateArgs{
+		Expression:    `window.location.toString()`,
+		ReturnByValue: &rValue,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var pageURL string
+	err = json.Unmarshal(rp.Result.Value, &pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(pageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
 }
 
 // Close closes the page and underlying connections.

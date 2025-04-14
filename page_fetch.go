@@ -9,6 +9,24 @@ import (
 	"github.com/mafredri/cdp/protocol/network"
 )
 
+type PageFetch interface {
+	// EnableFetch enables network fetch interception.
+	// Returns an error if enabling fails.
+	EnableFetch(ctx context.Context) error
+
+	// DisableFetch disables network fetch interception.
+	// Returns an error if disabling fails.
+	DisableFetch(ctx context.Context) error
+
+	// AddInterceptRequest adds a request interception callback.
+	// It takes a callback function and returns an InterceptRequestHandle.
+	AddInterceptRequest(ctx context.Context, cb InterceptRequestCallback) *InterceptRequestHandle
+
+	// RemoveInterceptRequest removes a request interception callback.
+	// It takes a handle to the callback to be removed.
+	RemoveInterceptRequest(ctx context.Context, handle *InterceptRequestHandle)
+}
+
 // EnableFetch enables network request interception.
 // It sets up the fetching mechanism and allows handling of authentication requests.
 // Returns an error if enabling fails.

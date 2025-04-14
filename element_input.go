@@ -7,6 +7,13 @@ import (
 	"github.com/mafredri/cdp/protocol/input"
 )
 
+type ElementInput interface {
+	// Click simulates a mouse click on the element.
+	// Accepts an ElementClickInput containing details for the click action.
+	// Returns an ElementClickOutput with the result or an error if the click fails.
+	Click(ctx context.Context, in *ElementClickInput) (*ElementClickOutput, error)
+}
+
 // ElementClickInput specifies the input parameters for simulating a click on an element.
 // - StepDuration: Duration to wait between each step of the click process: moving to the element, mouse press, and mouse release.
 // - HoldDuration: Duration to wait between mouse press and mouse release. Defaults to StepDuration if not set.

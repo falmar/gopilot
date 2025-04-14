@@ -155,6 +155,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 // BrowserNewPageInput contains parameters for creating a new page.
 type BrowserNewPageInput struct {
 	NewTab bool
+	URL    string
 }
 
 // BrowserNewPageOutput contains the result of creating a new page.
@@ -170,7 +171,11 @@ func (b *browser) NewPage(ctx context.Context, in *BrowserNewPageInput) (*Browse
 	var err error
 
 	if in.NewTab {
-		t, err = b.devtool.Create(ctx)
+		if in.URL == "" {
+			t, err = b.devtool.Create(ctx)
+		} else {
+			t, err = b.devtool.CreateURL(ctx, in.URL)
+		}
 	} else {
 		t, err = b.devtool.Get(ctx, devtool.Page)
 	}

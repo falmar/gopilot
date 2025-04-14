@@ -9,6 +9,23 @@ import (
 
 var ErrElementNotFound = errors.New("element not found")
 
+type PageDOM interface {
+	// GetContent retrieves the HTML content of the page as a string.
+	// Returns the content or an error if retrieving fails.
+	GetContent(ctx context.Context) (string, error)
+
+	// SetContent replaces the current DOM with supplied content
+	SetContent(ctx context.Context, content string) error
+
+	// QuerySelector finds an element matching the selector.
+	// Takes a PageQuerySelectorInput and returns a PageQuerySelectorOutput or an error.
+	QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error)
+
+	// Search finds an element matching the text, query selector or xpath
+	// Takes a PageSearchInput and returns a PageSearchOutput or an error.
+	Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
+}
+
 // GetContent retrieves the HTML content of the current page.
 // It returns the outer HTML as a string or an error if retrieval fails.
 func (p *page) GetContent(ctx context.Context) (string, error) {

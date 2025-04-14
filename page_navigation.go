@@ -7,6 +7,20 @@ import (
 	cdppage "github.com/mafredri/cdp/protocol/page"
 )
 
+type PageNavigation interface {
+	// Activate brings page to front
+	Activate(ctx context.Context) error
+
+	// Navigate navigates the page to the specified URL.
+	// The input is a PageNavigateInput containing the URL to navigate to.
+	// It returns a PageNavigateOutput or an error if the navigation fails.
+	Navigate(ctx context.Context, in *PageNavigateInput) (*PageNavigateOutput, error)
+
+	// Reload reloads the current page.
+	// It can take a PageReloadInput and returns a PageReloadOutput or an error.
+	Reload(ctx context.Context, in *PageReloadInput) (*PageReloadOutput, error)
+}
+
 // PageNavigateInput specifies the input for the Navigate method.
 // URL is the target URL to navigate to.
 // WaitDomContentLoad determines whether to wait for the DOM content to load.

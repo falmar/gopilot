@@ -10,26 +10,8 @@ import (
 
 // Element represents an interactive element in a web page.
 type Element interface {
-	// Click simulates a mouse click on the element.
-	// Accepts an ElementClickInput containing details for the click action.
-	// Returns an ElementClickOutput with the result or an error if the click fails.
-	Click(ctx context.Context, in *ElementClickInput) (*ElementClickOutput, error)
-
-	// ScrollIntoView performs an action to scroll the element into the viewport.
-	// Accepts an ElementScrollIntoViewInput with scroll parameters.
-	// Returns an ElementScrollIntoViewOutput or an error if the action fails.
-	ScrollIntoView(ctx context.Context, in *ElementScrollIntoViewInput) (*ElementScrollIntoViewOutput, error)
-
-	// Text retrieves the element's text content.
-	Text(ctx context.Context) (string, error)
-
-	// Focus sets focus on the element, allowing it to receive input.
-	// Returns an error if the action fails.
-	Focus(ctx context.Context) error
-
-	// GetRect retrieves the bounding rectangle of the element.
-	// Returns a BoundingRect containing the dimensions and position of the element, or an error if retrieval fails.
-	GetRect(ctx context.Context) (*BoundingRect, error)
+	ElementInput
+	ElementDOM
 
 	// TakeScreenshot captures a screenshot of the element.
 	// It uses the element's position and size to define the capture area.
@@ -37,8 +19,8 @@ type Element interface {
 	// Returns the screenshot data as bytes or an error if the capture fails.
 	TakeScreenshot(ctx context.Context, in *ElementTakeScreenshotInput) (*ElementTakeScreenshotOutput, error)
 
-	// Remove the element from the DOM tree
-	Remove(ctx context.Context) error
+	// GetNodeID gives the current node of the element
+	GetNodeID(ctx context.Context) dom.NodeID
 }
 
 // element is an implementation of the Element interface.
@@ -57,4 +39,8 @@ func newElement(node dom.Node, remoteObj runtime.RemoteObject, client *cdp.Clien
 		remoteObj: remoteObj,
 		client:    client,
 	}
+}
+
+func (e *element) GetNodeID(_ context.Context) dom.NodeID {
+	return e.node.NodeID
 }

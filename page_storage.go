@@ -8,6 +8,20 @@ import (
 	"github.com/mafredri/cdp/protocol/storage"
 )
 
+type PageStorage interface {
+	// GetCookies retrieves cookies for the current page.
+	// Takes a GetCookiesInput and returns GetCookiesOutput or an error.
+	GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookiesOutput, error)
+
+	// SetCookies sets cookies for the current page.
+	// Takes a SetCookiesInput and returns SetCookiesOutput or an error.
+	SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookiesOutput, error)
+
+	// ClearCookies clears cookies for the current page.
+	// Takes a ClearCookiesInput and returns ClearCookiesOutput or an error.
+	ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error)
+}
+
 // PageCookie represents a cookie in the browser.
 // It includes details such as name, value, domain, path, expiration, and security features.
 type PageCookie struct {

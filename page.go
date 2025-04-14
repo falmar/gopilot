@@ -13,73 +13,18 @@ import (
 
 // Page represents a web page in the browser.
 type Page interface {
-	// Activate brings page to front
-	Activate(ctx context.Context) error
-
-	// Navigate navigates the page to the specified URL.
-	// The input is a PageNavigateInput containing the URL to navigate to.
-	// It returns a PageNavigateOutput or an error if the navigation fails.
-	Navigate(ctx context.Context, in *PageNavigateInput) (*PageNavigateOutput, error)
-
-	// Reload reloads the current page.
-	// It can take a PageReloadInput and returns a PageReloadOutput or an error.
-	Reload(ctx context.Context, in *PageReloadInput) (*PageReloadOutput, error)
-
-	// GetContent retrieves the HTML content of the page as a string.
-	// Returns the content or an error if retrieving fails.
-	GetContent(ctx context.Context) (string, error)
-
-	// SetContent replaces the current DOM with supplied content
-	SetContent(ctx context.Context, content string) error
+	PageNavigation
+	PageDOM
+	PageFetch
+	PageStorage
 
 	// Close closes the page.
 	// Returns an error if closing the page fails.
 	Close(ctx context.Context) error
 
-	// EnableFetch enables network fetch interception.
-	// Returns an error if enabling fails.
-	EnableFetch(ctx context.Context) error
-
-	// DisableFetch disables network fetch interception.
-	// Returns an error if disabling fails.
-	DisableFetch(ctx context.Context) error
-
-	// AddInterceptRequest adds a request interception callback.
-	// It takes a callback function and returns an InterceptRequestHandle.
-	AddInterceptRequest(ctx context.Context, cb InterceptRequestCallback) *InterceptRequestHandle
-
-	// RemoveInterceptRequest removes a request interception callback.
-	// It takes a handle to the callback to be removed.
-	RemoveInterceptRequest(ctx context.Context, handle *InterceptRequestHandle)
-
 	// Evaluate runs JavaScript on the page.
 	// Takes a PageEvaluateInput and returns a PageEvaluateOutput or an error.
 	Evaluate(ctx context.Context, in *PageEvaluateInput) (*PageEvaluateOutput, error)
-
-	// QuerySelector finds an element matching the selector.
-	// Takes a PageQuerySelectorInput and returns a PageQuerySelectorOutput or an error.
-	QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*PageQuerySelectorOutput, error)
-
-	// Search finds an element matching the text, query selector or xpath
-	// Takes a PageSearchInput and returns a PageSearchOutput or an error.
-	Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
-
-	// GetCookies retrieves cookies for the current page.
-	// Takes a GetCookiesInput and returns GetCookiesOutput or an error.
-	GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookiesOutput, error)
-
-	// SetCookies sets cookies for the current page.
-	// Takes a SetCookiesInput and returns SetCookiesOutput or an error.
-	SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookiesOutput, error)
-
-	// ClearCookies clears cookies for the current page.
-	// Takes a ClearCookiesInput and returns ClearCookiesOutput or an error.
-	ClearCookies(ctx context.Context, in *ClearCookiesInput) (*ClearCookiesOutput, error)
-
-	// TypeText sends a sequence of keystrokes to the element as if typed by a user.
-	// Accepts an ElementTypeInput containing the text to type.
-	// Returns an ElementTypeOutput with the result or an error if typing fails.
-	TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTextOutput, error)
 
 	// TakeScreenshot captures a screenshot of the page.
 	// You can choose to capture the entire page or just the visible viewport.

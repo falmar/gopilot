@@ -7,6 +7,13 @@ import (
 	"github.com/mafredri/cdp/protocol/input"
 )
 
+type PageInput interface {
+	// TypeText sends a sequence of keystrokes to the element as if typed by a user.
+	// Accepts an ElementTypeInput containing the text to type.
+	// Returns an ElementTypeOutput with the result or an error if typing fails.
+	TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTextOutput, error)
+}
+
 type DispatchEventType string
 
 const (
@@ -48,6 +55,7 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 		keyDown := DispatchEventTypeKeyDown
 
 		if t == " " || t == "\u00A0" {
+			t = " "
 			keyDown = DispatchEventTypeRawKeyDown
 			k := " "
 			c := "Space"
@@ -58,6 +66,7 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 			code = &c
 			nativeVirtualCode = &vc
 			keyIdentifier = &ki
+			toType = &t
 		} else {
 			toType = &t
 		}

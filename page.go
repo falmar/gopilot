@@ -20,6 +20,7 @@ type Page interface {
 	PageDOM
 	PageFetch
 	PageStorage
+	PageInput
 
 	// Close closes the page.
 	// Returns an error if closing the page fails.

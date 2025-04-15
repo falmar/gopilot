@@ -2,9 +2,13 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/falmar/gopilot.svg)](https://pkg.go.dev/github.com/falmar/gopilot)
 
-An attempt to run Chromium automation with bare CDP commands. 
+A lightweight approach to Chromium automation using raw CDP commands.
 
 > **NOTE:** Breaking changes may occur until the API is finalized.
+
+<p align="center">
+  <img src="logo/logo.png" alt="GoPilot Logo" width="400"/>
+</p>
 
 ## Overview
 
@@ -34,9 +38,11 @@ Overall, gopilot aims to be a lightweight tool that doesn’t bog you down with 
 - **Navigate** to a specified URL
 - **Query Selector** to find elements on the page
 - **Click** on elements
-- **Extract** HTML content from the page
-- **Intercept** (Needs rework in order to allow modifying the request) network requests for those who want to dig deeper
-- **Set**, **get**, and **clear** cookies
+- **Get** and **set** HTML content
+- **Intercept Request/Response** (Needs rework in order to allow modifying the request) network requests for those who want to dig deeper
+- **Set**, **get**, and **clear** cookies and local storage
+- **Screenshots** the current page's viewport, the full page or an element's within is bounding box
+- **Text Typing** provide the text to be written (Needs more work on simulating keystrokes with keycodes and all that)
 
 ## Basic Usage Example
 
@@ -52,7 +58,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 func main() {
@@ -105,7 +111,8 @@ For more practical examples of how to use gopilot, check out the examples provid
 - [Cookies](./examples/cookies/main.go)
 - [Evaluate JS](./examples/eval/main.go)
 - [Listen XHR](./examples/listen_xhr/main.go)
-- [Open URL](./examples/open_url/main.go)
+- [Screenshots](./examples/screenshots/main.go)
+- [Typing](./examples/typing/main.go)
 
 ### Note on Headless Mode
 
@@ -116,7 +123,7 @@ browser in headless mode as follows:
 ```go
 package main
 
-import "github.com/falmar/gopilot/pkg/gopilot"
+import "github.com/falmar/gopilot"
 
 func main() {
 	// EnableHeadless will make the browser start as headless
@@ -135,9 +142,10 @@ func (c *BrowserConfig) EnableHeadless() {
 ### TODO:
 
 - Allow users to input an external browser endpoint
-- Taking screenshots of web pages and elements (yes, just element bounding box)
-- Setting, getting, and clearing local storage
-- Typing text into input fields
+- Listen for page/target events to change local data
+- Search and wait for DOM elements to be present/ready on the page
+- Integration tests?
+- Among other small things
 
 ## Contributions
 

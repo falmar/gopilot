@@ -16,7 +16,8 @@ gopilot is my attempt to provide a simple, minimalistic API for automating Chrom
 another Puppeteer. Instead, it's focused on the essential features most users need for straightforward browser tasks—no
 fluff, just what you need.
 
-Under the hood gopilot uses [github.com/mafredri/cdp](https://github.com/mafredri/cdp) for chrome communication, inspired by gRPC provides a really nice and easy API.
+Under the hood gopilot uses [github.com/mafredri/cdp](https://github.com/mafredri/cdp) for chrome communication,
+inspired by gRPC provides a really nice and easy API.
 
 ## Why Minimalistic?
 
@@ -39,10 +40,11 @@ Overall, gopilot aims to be a lightweight tool that doesn’t bog you down with 
 - **Query Selector** to find elements on the page
 - **Click** on elements
 - **Get** and **set** HTML content
-- **Intercept Request/Response** (Needs rework in order to allow modifying the request) network requests for those who want to dig deeper
+- **Intercept Request/Response** (Needs rework in order to allow modifying the request) network requests for those who
+  want to dig deeper
 - **Set**, **get**, and **clear** cookies and local storage
 - **Screenshots** the current page's viewport, the full page or an element's within is bounding box
-- **Text Typing** provide the text to be written (Needs more work on simulating keystrokes with keycodes and all that)
+- **Text Typing** just provide the text to be written, a delay or func can be supplied per keystroke delays 
 
 ## Basic Usage Example
 

@@ -79,13 +79,16 @@ func (p *page) DisableFetch(ctx context.Context) error {
 type InterceptRequestCallback func(ctx context.Context, req *fetch.RequestPausedReply) error
 
 // InterceptRequestHandle is a handle for managing request interception callbacks.
-type InterceptRequestHandle struct{}
+type InterceptRequestHandle struct {
+	cb InterceptRequestCallback
+}
 
 // AddInterceptRequest adds a request interception callback.
 // It returns a handle to manage the interception callback.
 func (p *page) AddInterceptRequest(_ context.Context, cb InterceptRequestCallback) *InterceptRequestHandle {
 	p.mux.Lock()
 	handle := &InterceptRequestHandle{}
+	handle.cb = cb
 	p.interceptRequests[handle] = cb
 	p.mux.Unlock()
 	return handle
@@ -96,6 +99,7 @@ func (p *page) AddInterceptRequest(_ context.Context, cb InterceptRequestCallbac
 func (p *page) RemoveInterceptRequest(_ context.Context, handle *InterceptRequestHandle) {
 	p.mux.Lock()
 	delete(p.interceptRequests, handle)
+	handle.cb = nil
 	p.mux.Unlock()
 }
 

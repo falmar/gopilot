@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/falmar/gopilot.svg)](https://pkg.go.dev/github.com/falmar/gopilot)
 
-A lightweight approach to Chromium automation using raw CDP commands.
+A lightweight approach to Chromium automation using basic CDP commands.
 
 > **NOTE:** Breaking changes may occur until the API is finalized.
 

@@ -95,6 +95,11 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		)
 	}
 
+	b.instance.Args = append(
+		b.instance.Args,
+		"about:blank",
+	)
+
 	// Handle stderr to capture DevTools URL
 	dtChan := make(chan string)
 	stderr, err := b.instance.StderrPipe()
@@ -172,7 +177,7 @@ func (b *browser) NewPage(ctx context.Context, in *BrowserNewPageInput) (*Browse
 
 	if in.NewTab {
 		if in.URL == "" {
-			t, err = b.devtool.Create(ctx)
+			t, err = b.devtool.CreateURL(ctx, "about:blank")
 		} else {
 			t, err = b.devtool.CreateURL(ctx, in.URL)
 		}

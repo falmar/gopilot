@@ -94,15 +94,8 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 		return nil, err
 	}
 
-	rrp, err := p.client.DOM.ResolveNode(ctx, &dom.ResolveNodeArgs{
-		NodeID: &qrp.NodeID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	return &PageQuerySelectorOutput{
-		Element: newElement(drp.Node, rrp.Object, p.client),
+		Element: NewElement(p.client, drp.Node),
 	}, nil
 }
 
@@ -162,14 +155,7 @@ func (p *page) Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutp
 		return nil, err
 	}
 
-	rrp, err := p.client.DOM.ResolveNode(ctx, &dom.ResolveNodeArgs{
-		NodeID: &drp.Node.NodeID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	return &PageSearchOutput{
-		Element: newElement(drp.Node, rrp.Object, p.client),
+		Element: NewElement(p.client, drp.Node),
 	}, nil
 }

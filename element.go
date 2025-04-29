@@ -25,20 +25,29 @@ type Element interface {
 
 // element is an implementation of the Element interface.
 type element struct {
-	node      dom.Node             // The DOM node representing the element.
-	remoteObj runtime.RemoteObject // javascript object of the node
-	client    *cdp.Client          // The CDP client for communication with the Chromium instance.
+	node   dom.Node    // The DOM node representing the element.
+	client *cdp.Client // The CDP client for communication with the Chromium instance.
 }
 
-// newElement creates a new Element instance.
+// NewElement creates a new Element instance.
 // It takes a DOM node, DevTools instance, and CDP client as parameters.
 // Returns a new Element implementation.
-func newElement(node dom.Node, remoteObj runtime.RemoteObject, client *cdp.Client) Element {
+func NewElement(client *cdp.Client, node dom.Node) Element {
 	return &element{
-		node:      node,
-		remoteObj: remoteObj,
-		client:    client,
+		client: client,
+		node:   node,
 	}
+}
+
+func (e *element) getRemoteObject(ctx context.Context) (*runtime.RemoteObject, error) {
+	rrp, err := e.client.DOM.ResolveNode(ctx, &dom.ResolveNodeArgs{
+		NodeID: &e.node.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &rrp.Object, nil
 }
 
 func (e *element) GetNodeID(_ context.Context) dom.NodeID {

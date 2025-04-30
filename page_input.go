@@ -33,6 +33,8 @@ type PageTypeTextInput struct {
 	Text      string        // The text to be typed into the page.
 	Delay     time.Duration // (optional) Duration between keystrokes.
 	DelayFunc TypeDelayFunc // (optional) Custom function for typing delays.
+
+	UseRawKeyDown bool
 }
 
 // PageTypeTextOutput represents the output of the Type method.
@@ -51,28 +53,41 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 		var code *string = nil
 		var nativeVirtualCode *int = nil
 		var keyIdentifier *string = nil
+		var sysKey *bool = nil
 
-		keyDown := DispatchEventTypeKeyDown
+		toType = &t
 
-		if t == " " || t == "\u00A0" {
+		if in.UseRawKeyDown && (t == " " || t == "\u00A0") {
 			t = " "
-			keyDown = DispatchEventTypeRawKeyDown
 			k := " "
 			c := "Space"
 			vc := 32
 			ki := "U+0020"
+			sk := true
 
 			key = &k
 			code = &c
 			nativeVirtualCode = &vc
 			keyIdentifier = &ki
+			sysKey = &sk
 			toType = &t
-		} else {
-			toType = &t
+
+			err := p.client.Input.DispatchKeyEvent(ctx, &input.DispatchKeyEventArgs{
+				Type:                  string(DispatchEventTypeRawKeyDown),
+				Key:                   key,
+				Code:                  code,
+				NativeVirtualKeyCode:  nativeVirtualCode,
+				WindowsVirtualKeyCode: nativeVirtualCode,
+				KeyIdentifier:         keyIdentifier,
+				IsSystemKey:           sysKey,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		err := p.client.Input.DispatchKeyEvent(ctx, &input.DispatchKeyEventArgs{
-			Type:                  string(keyDown),
+			Type:                  string(DispatchEventTypeKeyDown),
 			Text:                  toType,
 			UnmodifiedText:        toType,
 			Key:                   key,
@@ -80,6 +95,7 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 			NativeVirtualKeyCode:  nativeVirtualCode,
 			WindowsVirtualKeyCode: nativeVirtualCode,
 			KeyIdentifier:         keyIdentifier,
+			IsSystemKey:           sysKey,
 		})
 		if err != nil {
 			return nil, err
@@ -92,6 +108,7 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 			NativeVirtualKeyCode:  nativeVirtualCode,
 			WindowsVirtualKeyCode: nativeVirtualCode,
 			KeyIdentifier:         keyIdentifier,
+			IsSystemKey:           sysKey,
 		})
 		if err != nil {
 			return nil, err

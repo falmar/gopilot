@@ -106,8 +106,9 @@ wordLoop:
 
 		// Add a space after the word as the input resets by pressing "Space".
 		_, err = page.TypeText(ctx, &gopilot.PageTypeTextInput{
-			Text:  currentWord + " ",
-			Delay: time.Millisecond * 250,
+			Text:          currentWord + " ",
+			Delay:         time.Millisecond * 250,
+			UseRawKeyDown: true,
 		})
 		if err != nil {
 			logger.Error("unable to type word", "error", err, "word", currentWord)

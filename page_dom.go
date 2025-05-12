@@ -3,11 +3,13 @@ package gopilot
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/mafredri/cdp/protocol/dom"
 )
 
-var ErrElementNotFound = errors.New("element not found")
+var ErrElementNotFound = errors.New("page search: element not found")
+var ErrElementSearchTimeout = errors.New("page search: timeout")
 
 type PageDOM interface {
 	// GetContent retrieves the HTML content of the page as a string.
@@ -101,29 +103,84 @@ func (p *page) QuerySelector(ctx context.Context, in *PageQuerySelectorInput) (*
 
 // PageSearchInput contains the selector string for querying elements.
 type PageSearchInput struct {
-	Selector string
-	Pierce   bool
+	Selector     string        // selector for querying the element.
+	Pierce       bool          // Include User Agent Shadow DOM if true.
+	WaitDuration time.Duration // Max duration to wait for an element to be present.
+	TickDuration time.Duration // Duration between search attempts; defaults to 1 second if unset.
 }
 
 // PageSearchOutput contains the Element found by the query.
 type PageSearchOutput struct {
-	Element Element
+	Element Element // The first element matching the query.
 }
 
 func (p *page) Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error) {
-	_, err := p.client.DOM.GetDocument(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
+	var qsrp *dom.PerformSearchReply
 
-	qsrp, err := p.client.DOM.PerformSearch(ctx, &dom.PerformSearchArgs{
-		Query:                     in.Selector,
-		IncludeUserAgentShadowDOM: &in.Pierce,
-	})
-	if err != nil {
-		return nil, err
-	} else if qsrp.ResultCount <= 0 {
-		return nil, ErrElementNotFound
+	if in.WaitDuration > 0 {
+		tm := time.NewTimer(in.WaitDuration)
+		defer tm.Stop()
+
+		tkd := in.TickDuration
+		if tkd <= 0 {
+			tkd = time.Second
+		}
+
+		firstTry := true
+
+	waitLoop:
+		for {
+			var tk *time.Timer
+			if firstTry {
+				firstTry = false
+				tk = time.NewTimer(0)
+			} else {
+				tk = time.NewTimer(tkd)
+			}
+
+			select {
+			case <-ctx.Done():
+				tk.Stop()
+				return nil, ctx.Err()
+			case <-tm.C:
+				tk.Stop()
+				return nil, ErrElementSearchTimeout
+			case <-tk.C:
+				tk.Stop()
+
+				_, err := p.client.DOM.GetDocument(ctx, nil)
+				if err != nil {
+					return nil, err
+				}
+
+				qsrp, err = p.client.DOM.PerformSearch(ctx, &dom.PerformSearchArgs{
+					Query:                     in.Selector,
+					IncludeUserAgentShadowDOM: &in.Pierce,
+				})
+				if err != nil {
+					return nil, err
+				} else if qsrp.ResultCount <= 0 {
+					continue
+				}
+
+				break waitLoop
+			}
+		}
+	} else {
+		_, err := p.client.DOM.GetDocument(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		qsrp, err = p.client.DOM.PerformSearch(ctx, &dom.PerformSearchArgs{
+			Query:                     in.Selector,
+			IncludeUserAgentShadowDOM: &in.Pierce,
+		})
+		if err != nil {
+			return nil, err
+		} else if qsrp.ResultCount <= 0 {
+			return nil, ErrElementNotFound
+		}
 	}
 
 	srp, err := p.client.DOM.GetSearchResults(ctx, &dom.GetSearchResultsArgs{

@@ -38,7 +38,7 @@ func main() {
 	defer page.Close(ctx)
 
 	_, err = page.Navigate(ctx, &gopilot.PageNavigateInput{
-		URL:                "https://raw.githubusercontent.com/falmar/gopilot/refs/heads/dev/examples/search/tpl.html",
+		URL:                "https://falmar.github.io/gopilot/examples/search/tpl.html",
 		WaitDomContentLoad: true,
 	})
 	if err != nil {

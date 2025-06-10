@@ -49,11 +49,10 @@ Overall, gopilot aims to be a lightweight tool that doesn’t bog you down with 
 - **Headfull** mode support: Designed to run as headful and compatible with Docker using Xvfb for display.
 - **Headless** mode: Easily switch to headless operation when needed.
 - **Navigate** to a specified URL
-- **Query Selector** to find elements on the page
+- **Element Search** finds and/or wait for elements
 - **Click** on elements
 - **Get** and **set** HTML content
-- **Intercept Request/Response** (Needs rework in order to allow modifying the request) network requests for those who
-  want to dig deeper
+- **Intercept Request/Response** network requests for those who want to dig deeper
 - **Set**, **get**, and **clear** cookies and local storage
 - **Screenshots** the current page's viewport, the full page or an element's within is bounding box
 - **Text Typing** just provide the text to be written, a delay or func can be supplied per keystroke delays 
@@ -145,13 +144,14 @@ For more practical examples of how to use gopilot, check out the examples provid
 - [Click Element](./examples/click_element/main.go) - Demonstrates how to find and click on elements in a web page
 - [Cookies](./examples/cookies/main.go) - Shows how to set, get, and clear cookies
 - [Evaluate JS](./examples/eval/main.go) - Examples of executing JavaScript in the browser context
-- [Listen XHR](./examples/listen_xhr/main.go) - Demonstrates how to intercept and monitor XHR requests
 - [Local Storage](./examples/local_storage/main.go) - Shows how to interact with browser local storage
 - [Open Chrome](./examples/open_chrome/main.go) - Basic example of launching a Chrome browser
 - [Open URL](./examples/open_url/main.go) - Simple example of navigating to a URL
 - [Screenshots](./examples/screenshots/main.go) - Shows how to capture screenshots of pages or elements
 - [Search](./examples/search/main.go) - Demonstrates how to search for elements on a page
 - [Typing](./examples/typing/main.go) - Examples of typing text into input fields
+- [Request Modifier](./examples/request_modifier/main.go) - Demonstrates how to modify outgoing requests and provide custom responses
+- [Listen XHR](./examples/listen_xhr/main.go) - Demonstrates how to intercept and monitor XHR requests
 
 ## Advanced Usage
 

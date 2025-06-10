@@ -19,12 +19,20 @@ type PageFetch interface {
 	DisableFetch(ctx context.Context) error
 
 	// AddInterceptRequest adds a request interception callback.
-	// It takes a callback function and returns an InterceptRequestHandle.
+	// Returns a handle that can be used to remove the callback later.
 	AddInterceptRequest(ctx context.Context, cb InterceptRequestCallback) *InterceptRequestHandle
 
 	// RemoveInterceptRequest removes a request interception callback.
-	// It takes a handle to the callback to be removed.
+	// The handle parameter should be the value returned by AddInterceptRequest.
 	RemoveInterceptRequest(ctx context.Context, handle *InterceptRequestHandle)
+
+	// AddInterceptResponse adds a response interception callback.
+	// Returns a handle that can be used to remove the callback later.
+	AddInterceptResponse(ctx context.Context, cb InterceptResponseCallback) *InterceptResponseHandle
+
+	// RemoveInterceptResponse removes a response interception callback.
+	// The handle parameter should be the value returned by AddInterceptResponse.
+	RemoveInterceptResponse(ctx context.Context, handle *InterceptResponseHandle)
 }
 
 // EnableFetch enables network request interception.
@@ -51,7 +59,7 @@ func (p *page) EnableFetch(ctx context.Context) error {
 		return err
 	}
 	p.fetchEnabled = true
-	return p.handleInterceptRequest(ctx)
+	return p.handleRequestPaused(ctx)
 }
 
 // DisableFetch disables network request interception.
@@ -71,12 +79,12 @@ func (p *page) DisableFetch(ctx context.Context) error {
 }
 
 // InterceptRequestCallback is a function type for request interception.
-// It allows users to define logic for handling intercepted requests.
-// The callback receives the current context and a RequestPausedReply,
-// which includes details about the paused request.
-// If an error is returned, the request will be aborted,
-// providing flexibility to control network requests during automation tasks.
-type InterceptRequestCallback func(ctx context.Context, req *fetch.RequestPausedReply) error
+// The callback receives details about the paused request and can modify it or provide a custom response.
+// Return values:
+// - (nil, nil): Continue the request with any modifications made to continueArgs
+// - (nil, error): Abort the request with the given error
+// - (*fetch.FulfillRequestArgs, nil): Fulfill the request with a custom response
+type InterceptRequestCallback func(ctx context.Context, req *fetch.RequestPausedReply, continueArgs *fetch.ContinueRequestArgs) (*fetch.FulfillRequestArgs, error)
 
 // InterceptRequestHandle is a handle for managing request interception callbacks.
 type InterceptRequestHandle struct {
@@ -84,7 +92,7 @@ type InterceptRequestHandle struct {
 }
 
 // AddInterceptRequest adds a request interception callback.
-// It returns a handle to manage the interception callback.
+// Returns a handle to manage the interception callback.
 func (p *page) AddInterceptRequest(_ context.Context, cb InterceptRequestCallback) *InterceptRequestHandle {
 	p.mux.Lock()
 	handle := &InterceptRequestHandle{}
@@ -103,9 +111,39 @@ func (p *page) RemoveInterceptRequest(_ context.Context, handle *InterceptReques
 	p.mux.Unlock()
 }
 
-// handleInterceptRequest manages the received paused requests,
-// invoking the respective callbacks for each paused request.
-func (p *page) handleInterceptRequest(ctx context.Context) error {
+// InterceptResponseCallback is a function type for response interception.
+// The callback receives details about the paused response and can modify it.
+// If an error is returned, the response processing will be interrupted.
+type InterceptResponseCallback func(ctx context.Context, req *fetch.RequestPausedReply, continueArgs *fetch.ContinueResponseArgs) error
+
+// InterceptResponseHandle is a handle for managing response interception callbacks.
+type InterceptResponseHandle struct {
+	cb InterceptResponseCallback
+}
+
+// AddInterceptResponse adds a response interception callback.
+// Returns a handle to manage the interception callback.
+func (p *page) AddInterceptResponse(_ context.Context, cb InterceptResponseCallback) *InterceptResponseHandle {
+	p.mux.Lock()
+	handle := &InterceptResponseHandle{}
+	handle.cb = cb
+	p.interceptResponses[handle] = cb
+	p.mux.Unlock()
+	return handle
+}
+
+// RemoveInterceptResponse removes a response interception callback using the provided handle.
+// The callback associated with the handle is deleted.
+func (p *page) RemoveInterceptResponse(_ context.Context, handle *InterceptResponseHandle) {
+	p.mux.Lock()
+	delete(p.interceptResponses, handle)
+	handle.cb = nil
+	p.mux.Unlock()
+}
+
+// handleRequestPaused manages the received paused requests and responses,
+// invoking the respective callbacks for each paused request or response.
+func (p *page) handleRequestPaused(ctx context.Context) error {
 	if err := p.EnableFetch(ctx); err != nil {
 		return err
 	}
@@ -125,16 +163,37 @@ func (p *page) handleInterceptRequest(ctx context.Context) error {
 			} else if errors.Is(err, context.DeadlineExceeded) {
 				return
 			}
+
 			isResponse := rp.ResponseStatusCode != nil && *rp.ResponseStatusCode > 0
 
 			p.logger.Debug("received paused request", "request_id", rp.RequestID, "url", rp.Request.URL, "resource_type", rp.ResourceType, "response", isResponse)
 
 			var callbackErr error
+			var continueRequest *fetch.ContinueRequestArgs
+			var continueResponse *fetch.ContinueResponseArgs
+			var fulfillRequest *fetch.FulfillRequestArgs
+
 			p.mux.RLock()
-			for _, cb := range p.interceptRequests {
-				callbackErr = cb(ctx, rp)
-				if callbackErr != nil {
-					break
+			if isResponse {
+				continueResponse = &fetch.ContinueResponseArgs{RequestID: rp.RequestID}
+				for _, cb := range p.interceptResponses {
+					callbackErr = cb(ctx, rp, continueResponse)
+					if callbackErr != nil {
+						break
+					}
+				}
+			} else {
+				continueRequest = &fetch.ContinueRequestArgs{RequestID: rp.RequestID}
+				for _, cb := range p.interceptRequests {
+					var err error
+					fulfillRequest, err = cb(ctx, rp, continueRequest)
+					if err != nil {
+						callbackErr = err
+						break
+					}
+					if fulfillRequest != nil {
+						break
+					}
 				}
 			}
 			p.mux.RUnlock()
@@ -151,14 +210,22 @@ func (p *page) handleInterceptRequest(ctx context.Context) error {
 				continue
 			}
 
+			if !isResponse && fulfillRequest != nil {
+				// Fulfill the request with custom data
+				fulfillRequest.RequestID = rp.RequestID
+				if err := p.client.Fetch.FulfillRequest(ctx, fulfillRequest); err != nil {
+					p.logger.Warn("unable to fulfill request", "error", err, "url", rp.Request.URL)
+				}
+				continue
+			}
+
+			// set RequestID just in case
 			if isResponse {
-				callbackErr = p.client.Fetch.ContinueResponse(ctx, &fetch.ContinueResponseArgs{
-					RequestID: rp.RequestID,
-				})
+				continueResponse.RequestID = rp.RequestID
+				callbackErr = p.client.Fetch.ContinueResponse(ctx, continueResponse)
 			} else {
-				callbackErr = p.client.Fetch.ContinueRequest(ctx, &fetch.ContinueRequestArgs{
-					RequestID: rp.RequestID,
-				})
+				continueRequest.RequestID = rp.RequestID
+				callbackErr = p.client.Fetch.ContinueRequest(ctx, continueRequest)
 			}
 
 			if callbackErr != nil {

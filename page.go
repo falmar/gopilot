@@ -55,9 +55,10 @@ type page struct {
 	mux    sync.RWMutex
 	closed bool
 
-	fetchEnabled      bool
-	interceptClient   fetch.RequestPausedClient
-	interceptRequests map[*InterceptRequestHandle]InterceptRequestCallback
+	fetchEnabled       bool
+	interceptClient    fetch.RequestPausedClient
+	interceptRequests  map[*InterceptRequestHandle]InterceptRequestCallback
+	interceptResponses map[*InterceptResponseHandle]InterceptResponseCallback
 }
 
 // newPage creates a new Page instance.
@@ -78,13 +79,14 @@ func newPage(
 	logger.Debug("creating protocol client")
 	client := cdp.NewClient(conn)
 	p := &page{
-		id:                t.ID,
-		client:            client,
-		target:            t,
-		conn:              conn,
-		logger:            logger,
-		mux:               sync.RWMutex{},
-		interceptRequests: map[*InterceptRequestHandle]InterceptRequestCallback{},
+		id:                 t.ID,
+		client:             client,
+		target:             t,
+		conn:               conn,
+		logger:             logger,
+		mux:                sync.RWMutex{},
+		interceptRequests:  map[*InterceptRequestHandle]InterceptRequestCallback{},
+		interceptResponses: map[*InterceptResponseHandle]InterceptResponseCallback{},
 	}
 
 	// Enable events on the Page domain, it's often preferable to create

@@ -53,7 +53,6 @@ type browser struct {
 	datadir  string
 	mux      sync.RWMutex
 	devtool  *devtool.DevTools
-	pages    []Page
 	waitChan chan error
 }
 
@@ -62,7 +61,6 @@ func NewBrowser(cfg *BrowserConfig, logger *slog.Logger) Browser {
 	return &browser{
 		config:   cfg,
 		logger:   logger,
-		pages:    make([]Page, 0),
 		waitChan: make(chan error),
 	}
 }
@@ -194,10 +192,6 @@ func (b *browser) NewPage(ctx context.Context, in *BrowserNewPageInput) (*Browse
 		return nil, err
 	}
 
-	b.mux.Lock()
-	b.pages = append(b.pages, p)
-	b.mux.Unlock()
-
 	return &BrowserNewPageOutput{Page: p}, nil
 }
 
@@ -213,17 +207,6 @@ type BrowserGetPagesOutput struct {
 func (b *browser) GetPages(ctx context.Context, _ *BrowserGetPagesInput) (*BrowserGetPagesOutput, error) {
 	var pg []Page
 
-	b.mux.Lock()
-	defer b.mux.Unlock()
-
-	// Filter out closed pages
-	for _, p := range b.pages {
-		if p.(*page).closed {
-			continue
-		}
-		pg = append(pg, p)
-	}
-
 	// List available pages from devtool
 	targets, err := b.devtool.List(ctx)
 	if err != nil {
@@ -236,52 +219,45 @@ func (b *browser) GetPages(ctx context.Context, _ *BrowserGetPagesInput) (*Brows
 			continue
 		}
 
-		var present bool
-		for _, p := range pg {
-			if t.ID == p.(*page).id {
-				present = true
-				break
-			}
+		p, err := newPage(ctx, t, b.logger)
+		if err != nil {
+			return nil, err
 		}
-
-		if !present {
-			p, err := newPage(ctx, t, b.logger)
-			if err != nil {
-				return nil, err
-			}
-			pg = append(pg, p)
-		}
+		pg = append(pg, p)
 	}
-
-	// Update internal pages list
-	b.pages = pg
 
 	return &BrowserGetPagesOutput{Pages: pg}, nil
 }
 
 // Close shuts down the browser and cleans up resources.
 func (b *browser) Close(ctx context.Context) error {
-	b.logger.Debug("closing pages", "len", len(b.pages))
+	// allow a brief moment before closing pages
+	time.Sleep(time.Millisecond * 5)
 
-	b.mux.RLock()
-	for _, p := range b.pages {
-		p := p.(*page)
-		if p.closed {
-			b.logger.Debug("page already closed", "target_id", p.target.ID)
-			continue
-		}
-		b.logger.Debug("closing page", "target_id", p.target.ID)
-		err := p.Close(ctx)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			return err
+	pageOut, err := b.GetPages(ctx, &BrowserGetPagesInput{})
+	if err != nil {
+		b.logger.Debug("error getting pages before closing", "err", err)
+	} else {
+		b.logger.Debug("closing pages", "len", len(pageOut.Pages))
+
+		for _, p := range pageOut.Pages {
+			p := p.(*page)
+			if p.closed {
+				b.logger.Debug("page already closed", "target_id", p.target.ID)
+				continue
+			}
+			b.logger.Debug("closing page", "target_id", p.target.ID)
+			err := p.Close(ctx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				b.logger.Debug("closing page error", "target_id", p.target.ID, "err", err)
+			}
 		}
 	}
-	b.mux.RUnlock()
 
 	b.devtool = nil
-	b.pages = nil
 
-	err := b.instance.Process.Signal(os.Interrupt)
+	b.logger.Debug("sending signal to close chrome instance")
+	err = b.instance.Process.Signal(os.Interrupt)
 	if err != nil {
 		return err
 	}

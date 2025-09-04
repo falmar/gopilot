@@ -1,6 +1,9 @@
 package gopilot
 
-import "os"
+import (
+	"os"
+	"time"
+)
 
 // BrowserConfig holds configuration settings for launching a browser instance.
 type BrowserConfig struct {
@@ -15,6 +18,10 @@ type BrowserConfig struct {
 
 	// Envs holds any environment variables to set for the browser process.
 	Envs []string
+
+	// OpenTimeout defines how long to wait for Chrome to print the "DevTools listening on" message during startup.
+	// If nil, a default of 5 seconds is used. Increase this if your environment starts Chrome slowly.
+	OpenTimeout *time.Duration
 }
 
 // NewBrowserConfig creates a new BrowserConfig with default settings.

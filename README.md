@@ -188,6 +188,10 @@ type BrowserConfig struct {
 
     // Envs holds environment variables for the browser process
     Envs []string
+
+    // OpenTimeout defines how long to wait for Chrome to print the
+    // "DevTools listening on" message during startup. If nil, defaults to 5s.
+    OpenTimeout *time.Duration
 }
 ```
 

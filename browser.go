@@ -128,7 +128,14 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	}()
 
 	// Wait for the DevTools URL message or timeout
-	waitDuration := time.Second * 5
+	var waitDuration time.Duration
+
+	if b.config.OpenTimeout != nil {
+		waitDuration = *b.config.OpenTimeout
+	} else {
+		waitDuration = time.Second * 5
+	}
+
 	var devtoolsURLString string
 	select {
 	case err := <-b.waitChan:

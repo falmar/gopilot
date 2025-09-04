@@ -133,7 +133,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	if b.config.OpenTimeout != nil {
 		waitDuration = *b.config.OpenTimeout
 	} else {
-		waitDuration = time.Second * 5
+		waitDuration = defaultOpenTimeout
 	}
 
 	var devtoolsURLString string
@@ -214,18 +214,12 @@ type BrowserGetPagesOutput struct {
 func (b *browser) GetPages(ctx context.Context, _ *BrowserGetPagesInput) (*BrowserGetPagesOutput, error) {
 	var pg []Page
 
-	// List available pages from devtool
-	targets, err := b.devtool.List(ctx)
+	targets, err := b.getPageTargets(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add new targets to the list
 	for _, t := range targets {
-		if t.Type != devtool.Page {
-			continue
-		}
-
 		p, err := newPage(ctx, t, b.logger)
 		if err != nil {
 			return nil, err
@@ -239,34 +233,52 @@ func (b *browser) GetPages(ctx context.Context, _ *BrowserGetPagesInput) (*Brows
 // Close shuts down the browser and cleans up resources.
 func (b *browser) Close(ctx context.Context) error {
 	// allow a brief moment before closing pages
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(defaultClosePause)
 
-	pageOut, err := b.GetPages(ctx, &BrowserGetPagesInput{})
+	// List available pages from devtool
+	targets, err := b.getPageTargets(ctx)
 	if err != nil {
 		b.logger.Debug("error getting pages before closing", "err", err)
 	} else {
-		b.logger.Debug("closing pages", "len", len(pageOut.Pages))
+		b.logger.Debug("closing pages", "len", len(targets))
 
-		for _, p := range pageOut.Pages {
-			p := p.(*page)
-			if p.closed {
-				b.logger.Debug("page already closed", "target_id", p.target.ID)
-				continue
-			}
-			b.logger.Debug("closing page", "target_id", p.target.ID)
-			err := p.Close(ctx)
+		for _, t := range targets {
+			b.logger.Debug("closing page", "target_id", t.ID)
+			err := b.devtool.Close(ctx, t)
 			if err != nil && !errors.Is(err, context.Canceled) {
-				b.logger.Debug("closing page error", "target_id", p.target.ID, "err", err)
+				b.logger.Debug("closing page error", "target_id", t.ID, "err", err)
 			}
 		}
 	}
 
 	b.devtool = nil
 
-	b.logger.Debug("sending signal to close chrome instance")
-	err = b.instance.Process.Signal(os.Interrupt)
-	if err != nil {
-		return err
+	errChan := make(chan error, 1)
+	go func() {
+		defer close(errChan)
+		b.logger.Debug("sending signal to close chrome instance")
+		errChan <- b.instance.Process.Kill()
+	}()
+
+	var closeTimeout time.Duration
+	if b.config.CloseTimeout != nil {
+		closeTimeout = *b.config.CloseTimeout
+	} else {
+		closeTimeout = defaultCloseTimeout
+	}
+
+	timer := time.NewTimer(closeTimeout)
+	defer timer.Stop()
+
+	select {
+	case err, ok := <-errChan:
+		if ok && err != nil {
+			b.logger.Error("error closing chrome instance. killing the process", "err", err)
+			_ = b.instance.Process.Kill()
+		}
+	case <-timer.C:
+		b.logger.Debug("closing chrome instance timeout", "timeout", closeTimeout)
+		_ = b.instance.Process.Kill()
 	}
 
 	defer func() {
@@ -288,4 +300,22 @@ func (b *browser) Close(ctx context.Context) error {
 // enabling custom actions and low-level debugging or profiling features.
 func (b *browser) GetDevToolClient() *devtool.DevTools {
 	return b.devtool
+}
+
+func (b *browser) getPageTargets(ctx context.Context) ([]*devtool.Target, error) {
+	// List available pages from devtool
+	targets, err := b.devtool.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add new targets to the list
+	var pages []*devtool.Target
+	for _, t := range targets {
+		if t.Type != devtool.Page {
+			continue
+		}
+		pages = append(pages, t)
+	}
+	return pages, nil
 }

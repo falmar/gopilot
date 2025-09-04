@@ -128,6 +128,15 @@ func getPageCurrentURL(ctx context.Context, p *page) (*url.URL, error) {
 func (p *page) Close(ctx context.Context) error {
 	defer p.conn.Close()
 
+	if p.interceptClient != nil {
+		p.logger.Debug("closing intercept client", "id", p.id)
+		err := p.interceptClient.Close()
+		if err != nil {
+			p.logger.Error("failed to close intercept client", "error", err)
+		}
+	}
+
+	p.logger.Debug("closing page", "id", p.id)
 	err := p.client.Page.Close(ctx)
 	if err != nil {
 		return err

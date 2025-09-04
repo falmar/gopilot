@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+var defaultOpenTimeout = 5 * time.Second
+var defaultCloseTimeout = 5 * time.Second
+var defaultClosePause = 50 * time.Millisecond
+
 // BrowserConfig holds configuration settings for launching a browser instance.
 type BrowserConfig struct {
 	// Path specifies the path to the browser executable.
@@ -22,6 +26,10 @@ type BrowserConfig struct {
 	// OpenTimeout defines how long to wait for Chrome to print the "DevTools listening on" message during startup.
 	// If nil, a default of 5 seconds is used. Increase this if your environment starts Chrome slowly.
 	OpenTimeout *time.Duration
+
+	// CloseTimeout defines how long to wait for the Chrome process to terminate during shutdown.
+	// If nil, a default of 5 seconds is used. Increase this if your environment needs more time to exit cleanly.
+	CloseTimeout *time.Duration
 }
 
 // NewBrowserConfig creates a new BrowserConfig with default settings.

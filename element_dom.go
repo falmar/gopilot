@@ -9,6 +9,9 @@ import (
 )
 
 type ElementDOM interface {
+	// HTML retrieves the element's outer HTML content
+	HTML(ctx context.Context) (string, error)
+
 	// Text retrieves the element's text content.
 	Text(ctx context.Context) (string, error)
 
@@ -46,6 +49,17 @@ func (e *element) Focus(ctx context.Context) error {
 	return e.client.DOM.Focus(ctx, &dom.FocusArgs{
 		ObjectID: robj.ObjectID,
 	})
+}
+
+func (e *element) HTML(ctx context.Context) (string, error) {
+	out, err := e.client.DOM.GetOuterHTML(ctx, &dom.GetOuterHTMLArgs{
+		NodeID: &e.node.NodeID,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return out.OuterHTML, nil
 }
 
 func (e *element) Text(ctx context.Context) (string, error) {

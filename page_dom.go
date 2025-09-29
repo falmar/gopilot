@@ -26,6 +26,13 @@ type PageDOM interface {
 	// Search finds an element matching the text, query selector or xpath
 	// Takes a PageSearchInput and returns a PageSearchOutput or an error.
 	Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
+
+	// SearchAll find all elements that match the given page search info selector.
+	// Takes a PageSearchInput and returns a PageSearchOutput with the element list filled or an error
+	SearchAll(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
+
+	// SearchFromElement find the first element that matches the PageQuerySelectorInput inside the parent element
+	SearchFromElement(ctx context.Context, parent Element, in *PageQuerySelectorInput) (*PageSearchOutput, error)
 }
 
 // GetContent retrieves the HTML content of the current page.
@@ -111,7 +118,8 @@ type PageSearchInput struct {
 
 // PageSearchOutput contains the Element found by the query.
 type PageSearchOutput struct {
-	Element Element // The first element matching the query.
+	Element  Element   // The first element matching the query.
+	Elements []Element // All elements when using multi result search
 }
 
 func (p *page) Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error) {
@@ -212,6 +220,70 @@ func (p *page) Search(ctx context.Context, in *PageSearchInput) (*PageSearchOutp
 		return nil, err
 	}
 
+	return &PageSearchOutput{
+		Element: NewElement(p.client, drp.Node),
+	}, nil
+}
+
+func (p *page) SearchAll(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error) {
+	psr, err := p.client.DOM.PerformSearch(ctx, &dom.PerformSearchArgs{
+		Query:                     in.Selector,
+		IncludeUserAgentShadowDOM: &in.Pierce,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if psr.ResultCount == 0 {
+		return &PageSearchOutput{}, nil
+	}
+
+	gsr, err := p.client.DOM.GetSearchResults(ctx, &dom.GetSearchResultsArgs{
+		SearchID:  psr.SearchID,
+		FromIndex: 0,
+		ToIndex:   psr.ResultCount,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	elements := make([]Element, 0, len(gsr.NodeIDs))
+	for _, id := range gsr.NodeIDs {
+		if id == 0 {
+			continue
+		}
+		drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
+			NodeID: &id,
+		})
+		if err != nil {
+			continue
+		}
+		elements = append(elements, NewElement(p.client, drp.Node))
+	}
+
+	return &PageSearchOutput{
+		Elements: elements,
+	}, nil
+}
+
+func (p *page) SearchFromElement(ctx context.Context, parent Element, in *PageQuerySelectorInput) (*PageSearchOutput, error) {
+	nodeID := parent.GetNodeID(ctx)
+	qsr, err := p.client.DOM.QuerySelector(ctx, &dom.QuerySelectorArgs{
+		NodeID:   nodeID,
+		Selector: in.Selector,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if qsr.NodeID == 0 {
+		return &PageSearchOutput{}, nil
+	}
+	drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
+		NodeID: &qsr.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &PageSearchOutput{
 		Element: NewElement(p.client, drp.Node),
 	}, nil

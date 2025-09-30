@@ -9,6 +9,7 @@ import (
 )
 
 var ErrElementNotFound = errors.New("page search: element not found")
+
 var ErrElementSearchTimeout = errors.New("page search: timeout")
 
 type PageDOM interface {
@@ -30,9 +31,6 @@ type PageDOM interface {
 	// SearchAll find all elements that match the given page search info selector.
 	// Takes a PageSearchInput and returns a PageSearchOutput with the element list filled or an error
 	SearchAll(ctx context.Context, in *PageSearchInput) (*PageSearchOutput, error)
-
-	// SearchFromElement find the first element that matches the PageQuerySelectorInput inside the parent element
-	SearchFromElement(ctx context.Context, parent Element, in *PageQuerySelectorInput) (*PageSearchOutput, error)
 }
 
 // GetContent retrieves the HTML content of the current page.
@@ -263,28 +261,5 @@ func (p *page) SearchAll(ctx context.Context, in *PageSearchInput) (*PageSearchO
 
 	return &PageSearchOutput{
 		Elements: elements,
-	}, nil
-}
-
-func (p *page) SearchFromElement(ctx context.Context, parent Element, in *PageQuerySelectorInput) (*PageSearchOutput, error) {
-	nodeID := parent.GetNodeID(ctx)
-	qsr, err := p.client.DOM.QuerySelector(ctx, &dom.QuerySelectorArgs{
-		NodeID:   nodeID,
-		Selector: in.Selector,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if qsr.NodeID == 0 {
-		return &PageSearchOutput{}, nil
-	}
-	drp, err := p.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
-		NodeID: &qsr.NodeID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &PageSearchOutput{
-		Element: NewElement(p.client, drp.Node),
 	}, nil
 }

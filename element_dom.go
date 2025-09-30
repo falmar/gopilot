@@ -30,6 +30,13 @@ type ElementDOM interface {
 
 	// Remove the element from the DOM tree
 	Remove(ctx context.Context) error
+
+	// Search child element of current element
+	Search(ctx context.Context, in *ElementQuerySelectorInput) (Element, error)
+}
+
+type ElementQuerySelectorInput struct {
+	Selector string
 }
 
 func (e *element) Remove(ctx context.Context) error {
@@ -176,4 +183,26 @@ func (e *element) GetRect(ctx context.Context) (*BoundingRect, error) {
 	rect.CenterY = rect.Y + rect.Height/2
 
 	return rect, nil
+}
+
+func (e *element) Search(ctx context.Context, in *ElementQuerySelectorInput) (Element, error) {
+	qsr, err := e.client.DOM.QuerySelector(ctx, &dom.QuerySelectorArgs{
+		NodeID:   e.node.NodeID,
+		Selector: in.Selector,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if qsr.NodeID == 0 {
+		return nil, nil
+	}
+
+	drp, err := e.client.DOM.DescribeNode(ctx, &dom.DescribeNodeArgs{
+		NodeID: &qsr.NodeID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return NewElement(e.client, drp.Node), nil
 }

@@ -144,6 +144,7 @@ For more practical examples of how to use gopilot, check out the examples provid
 - [Click Element](./examples/click_element/main.go) - Demonstrates how to find and click on elements in a web page
 - [Cookies](./examples/cookies/main.go) - Shows how to set, get, and clear cookies
 - [Evaluate JS](./examples/eval/main.go) - Examples of executing JavaScript in the browser context
+- [External Browser](./examples/external_browser/main.go) - Shows how to connect to an existing Chrome instance instead of launching a new one
 - [Local Storage](./examples/local_storage/main.go) - Shows how to interact with browser local storage
 - [Open Chrome](./examples/open_chrome/main.go) - Basic example of launching a Chrome browser
 - [Open URL](./examples/open_url/main.go) - Simple example of navigating to a URL
@@ -166,6 +167,41 @@ browser in headless mode as follows:
 cfg := gopilot.NewBrowserConfig()
 cfg.EnableHeadless()
 ```
+
+### Connecting to External Browsers
+
+gopilot can connect to existing Chrome/Chromium instances instead of launching a new process. This is useful for debugging, reusing browsers across multiple runs, or working with browsers that have specific profiles or extensions loaded.
+
+**Start Chrome with remote debugging:**
+```bash
+chromium --remote-debugging-port=9222
+```
+
+**Connect gopilot to the external browser:**
+```go
+cfg := gopilot.NewBrowserConfig()
+cfg.ConnectionURL = "http://127.0.0.1:9222"
+
+b := gopilot.NewBrowser(cfg, logger)
+err := b.Open(ctx, &gopilot.BrowserOpenInput{})
+if err != nil {
+    // Connection failed - browser may not be running
+    return
+}
+defer b.Close(ctx) // Closes pages but does NOT kill the browser
+```
+
+**Session-Based Page Tracking:**
+gopilot only manages pages it creates (via `NewTab: true`). This means:
+- `Close()` only closes pages created by this gopilot instance (session pages)
+- User tabs and pages from other gopilot instances are preserved
+- Multiple gopilot instances can safely share the same browser without conflicts
+
+**GetPages() vs GetAllPages():**
+- `GetPages()` - Returns only pages created by this instance (closeable)
+- `GetAllPages()` - Returns ALL pages in the browser for inspection (calling Close() on these is a no-op)
+
+See the [External Browser example](./examples/external_browser/main.go) for a complete demonstration.
 
 ## Configuration Options
 
@@ -199,7 +235,7 @@ type BrowserConfig struct {
 
 When you call `gopilot.NewBrowserConfig()`, it creates a configuration with these defaults:
 
-- **Browser Path**: Uses the Chrome executable specified by the `GOPILOT_CHROME_EXECUTABLE` environment variable, or defaults to "google-chrome-stable"
+- **Browser Path**: Uses the Chrome executable specified by the `GOPILOT_CHROME_EXECUTABLE` environment variable, or defaults to "chromium"
 - **Debug Port**: "9222"
 - **Default Arguments**: Several arguments for optimal browser operation:
   - `--remote-allow-origins=*`
@@ -239,7 +275,6 @@ gopilot is currently in active development ("WIP" - Work In Progress). While the
 
 ### Planned Features
 
-- Allow users to input an external browser endpoint
 - Listen for page/target events to change local data
 - Integration tests
 - Performance optimizations

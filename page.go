@@ -47,13 +47,15 @@ type Page interface {
 }
 
 type page struct {
-	id     string
-	target *devtool.Target
-	conn   *rpcc.Conn
-	client *cdp.Client
-	logger *slog.Logger
-	mux    sync.RWMutex
-	closed bool
+	id            string
+	target        *devtool.Target
+	conn          *rpcc.Conn
+	client        *cdp.Client
+	logger        *slog.Logger
+	mux           sync.RWMutex
+	closed        bool
+	browser       *browser // back-reference for session tracking
+	isSessionPage bool     // true if created by session, false if externally managed
 
 	fetchEnabled       bool
 	interceptClient    fetch.RequestPausedClient
@@ -63,10 +65,12 @@ type page struct {
 
 // newPage creates a new Page instance.
 // It initializes connection and protocol client, and enables page events.
+// The isSessionPage parameter determines if this page is tracked by the session.
 func newPage(
 	ctx context.Context,
 	t *devtool.Target,
 	logger *slog.Logger,
+	isSessionPage bool,
 ) (Page, error) {
 	logger.Debug("creating rpc conn")
 	conn, err := rpcc.DialContext(ctx, t.WebSocketDebuggerURL,
@@ -85,6 +89,7 @@ func newPage(
 		conn:               conn,
 		logger:             logger,
 		mux:                sync.RWMutex{},
+		isSessionPage:      isSessionPage,
 		interceptRequests:  map[*InterceptRequestHandle]InterceptRequestCallback{},
 		interceptResponses: map[*InterceptResponseHandle]InterceptResponseCallback{},
 	}
@@ -126,6 +131,12 @@ func getPageCurrentURL(ctx context.Context, p *page) (*url.URL, error) {
 
 // Close closes the page and underlying connections.
 func (p *page) Close(ctx context.Context) error {
+	// If not a session page, don't actually close it (no-op for non-tracked pages)
+	if !p.isSessionPage {
+		p.logger.Debug("skipping close for non-session page", "id", p.id)
+		return nil
+	}
+
 	defer p.conn.Close()
 
 	if p.interceptClient != nil {
@@ -136,7 +147,7 @@ func (p *page) Close(ctx context.Context) error {
 		}
 	}
 
-	p.logger.Debug("closing page", "id", p.id)
+	p.logger.Debug("closing session page", "id", p.id)
 	err := p.client.Page.Close(ctx)
 	if err != nil {
 		return err
@@ -145,6 +156,11 @@ func (p *page) Close(ctx context.Context) error {
 	p.mux.Lock()
 	p.closed = true
 	p.mux.Unlock()
+
+	// Remove from session tracking using browser helper
+	if p.browser != nil {
+		p.browser.removeSessionPage(p.id)
+	}
 
 	return nil
 }

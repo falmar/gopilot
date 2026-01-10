@@ -38,9 +38,9 @@ func NewXHRMonitor(p Page) XHRMonitor {
 
 // xhrMonitor is a concrete implementation of the XHRMonitor interface.
 type xhrMonitor struct {
-	p        Page                    // Associated Page
-	c        chan *XHREvent          // Channel for XHREvents
-	cbHandle *InterceptRequestHandle // Handle to the request interception
+	p        Page                     // Associated Page
+	c        chan *XHREvent           // Channel for XHREvents
+	cbHandle *InterceptResponseHandle // Handle to the response interception
 }
 
 // Listen starts listening for XHR events that match the given patterns.
@@ -52,14 +52,9 @@ func (m *xhrMonitor) Listen(ctx context.Context, patterns []string) (chan *XHREv
 	}
 
 	hasPatterns := len(patterns) > 0
-	m.cbHandle = m.p.AddInterceptRequest(ctx, InterceptRequestCallback(func(ctx context.Context, rp *fetch.RequestPausedReply) error {
+	m.cbHandle = m.p.AddInterceptResponse(ctx, func(ctx context.Context, rp *fetch.RequestPausedReply, continueArgs *fetch.ContinueResponseArgs) error {
 		// Filter out non-XHR and non-fetch requests.
 		if rp.ResourceType != network.ResourceTypeFetch && rp.ResourceType != network.ResourceTypeXHR {
-			return nil
-		}
-
-		isResponse := rp.ResponseStatusCode != nil && *rp.ResponseStatusCode > 0
-		if !isResponse {
 			return nil
 		}
 
@@ -95,13 +90,13 @@ func (m *xhrMonitor) Listen(ctx context.Context, patterns []string) (chan *XHREv
 		// Send the event to the channel.
 		m.c <- ev
 		return nil
-	}))
+	})
 
 	return m.c, nil
 }
 
 // Stop stops monitoring XHR requests.
 func (m *xhrMonitor) Stop(ctx context.Context) error {
-	m.p.RemoveInterceptRequest(ctx, m.cbHandle)
+	m.p.RemoveInterceptResponse(ctx, m.cbHandle)
 	return nil
 }

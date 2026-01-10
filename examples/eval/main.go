@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	gopilot "github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 // click cookies with eval

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Document</title>
+  <style>
+    button.green {
+      background-color: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+<form>
+  <label for="name">Name:</label>
+  <input type="text" id="name"><br><br>
+  <label for="email">Email:</label>
+  <input type="email" id="email"><br><br>
+  <button type="button" id="submitBtn">Submit</button>
+</form>
+<script>
+  setTimeout(() => {
+    const button = document.querySelector('button#submitBtn')
+    button.classList.add('green')
+  }, 3000)
+</script>
+</body>
+</html>

@@ -1,10 +1,26 @@
-# WIP: gopilot
+# gopilot
+
+<p align="center">
+  <img src="logo/logo.png" alt="GoPilot Logo" width="400"/>
+</p>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/falmar/gopilot.svg)](https://pkg.go.dev/github.com/falmar/gopilot)
 
-An attempt to run Chromium automation with bare CDP commands. 
+A lightweight approach to Chromium automation using basic CDP commands.
 
 > **NOTE:** Breaking changes may occur until the API is finalized.
+
+## Table of Contents
+- [Overview](#overview)
+- [Why Minimalistic?](#why-minimalistic)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Examples](#examples)
+- [Configuration](#configuration)
+- [Advanced Usage](#advanced-usage)
+- [Project Status & Roadmap](#project-status--roadmap)
+- [Contributions](#contributions)
 
 ## Overview
 
@@ -12,7 +28,8 @@ gopilot is my attempt to provide a simple, minimalistic API for automating Chrom
 another Puppeteer. Instead, it's focused on the essential features most users need for straightforward browser tasks—no
 fluff, just what you need.
 
-Under the hood gopilot uses [github.com/mafredri/cdp](https://github.com/mafredri/cdp) for chrome communication, inspired by gRPC provides a really nice and easy API.
+Under the hood gopilot uses [github.com/mafredri/cdp](https://github.com/mafredri/cdp) for chrome communication,
+inspired by gRPC provides a really nice and easy API.
 
 ## Why Minimalistic?
 
@@ -32,13 +49,36 @@ Overall, gopilot aims to be a lightweight tool that doesn’t bog you down with 
 - **Headfull** mode support: Designed to run as headful and compatible with Docker using Xvfb for display.
 - **Headless** mode: Easily switch to headless operation when needed.
 - **Navigate** to a specified URL
-- **Query Selector** to find elements on the page
+- **Element Search** finds and/or wait for elements
 - **Click** on elements
-- **Extract** HTML content from the page
-- **Intercept** (Needs rework in order to allow modifying the request) network requests for those who want to dig deeper
-- **Set**, **get**, and **clear** cookies
+- **Get** and **set** HTML content
+- **Intercept Request/Response** network requests for those who want to dig deeper
+- **Set**, **get**, and **clear** cookies and local storage
+- **Screenshots** the current page's viewport, the full page or an element's within is bounding box
+- **Text Typing** just provide the text to be written, a delay or func can be supplied per keystroke delays 
 
-## Basic Usage Example
+## Installation
+
+### Prerequisites
+
+- Go 1.24.0 or later
+- Chrome or Chromium browser installed on your system
+
+### Installing gopilot
+
+To install gopilot, use the standard Go package installation command:
+
+```bash
+go get github.com/falmar/gopilot
+```
+
+Import it in your Go code:
+
+```go
+import "github.com/falmar/gopilot"
+```
+
+## Quick Start
 
 Here's a very basic example of how to use gopilot to open a URL:
 
@@ -52,7 +92,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 func main() {
@@ -97,47 +137,155 @@ func main() {
 
 ```
 
-### More Examples
+## Examples
 
 For more practical examples of how to use gopilot, check out the examples provided:
 
-- [Click Element](./examples/click_element/main.go)
-- [Cookies](./examples/cookies/main.go)
-- [Evaluate JS](./examples/eval/main.go)
-- [Listen XHR](./examples/listen_xhr/main.go)
-- [Open URL](./examples/open_url/main.go)
+- [Click Element](./examples/click_element/main.go) - Demonstrates how to find and click on elements in a web page
+- [Cookies](./examples/cookies/main.go) - Shows how to set, get, and clear cookies
+- [Evaluate JS](./examples/eval/main.go) - Examples of executing JavaScript in the browser context
+- [External Browser](./examples/external_browser/main.go) - Shows how to connect to an existing Chrome instance instead of launching a new one
+- [Local Storage](./examples/local_storage/main.go) - Shows how to interact with browser local storage
+- [Open Chrome](./examples/open_chrome/main.go) - Basic example of launching a Chrome browser
+- [Open URL](./examples/open_url/main.go) - Simple example of navigating to a URL
+- [Screenshots](./examples/screenshots/main.go) - Shows how to capture screenshots of pages or elements
+- [Search](./examples/search/main.go) - Demonstrates how to search for elements on a page
+- [Typing](./examples/typing/main.go) - Examples of typing text into input fields
+- [Request Modifier](./examples/request_modifier/main.go) - Demonstrates how to modify outgoing requests and provide custom responses
+- [Listen XHR](./examples/listen_xhr/main.go) - Demonstrates how to intercept and monitor XHR requests
 
-### Note on Headless Mode
+## Advanced Usage
+
+### Headless Mode
 
 By default, gopilot runs in headful mode, which may require a display server when running in a Docker container. To
 switch to headless mode, simply call the `EnableHeadless` method on the `BrowserConfig` object. You can start the
 browser in headless mode as follows:
 
 ```go
-package main
+// EnableHeadless will make the browser start as headless
+cfg := gopilot.NewBrowserConfig()
+cfg.EnableHeadless()
+```
 
-import "github.com/falmar/gopilot/pkg/gopilot"
+### Connecting to External Browsers
 
-func main() {
-	// EnableHeadless will make the browser start as headless
-	cfg := gopilot.NewBrowserConfig()
-	cfg.EnableHeadless()
+gopilot can connect to existing Chrome/Chromium instances instead of launching a new process. This is useful for debugging, reusing browsers across multiple runs, or working with browsers that have specific profiles or extensions loaded.
 
-	// ...
+**Start Chrome with remote debugging:**
+```bash
+chromium --remote-debugging-port=9222
+```
+
+**Connect gopilot to the external browser:**
+```go
+cfg := gopilot.NewBrowserConfig()
+cfg.ConnectionURL = "http://127.0.0.1:9222"
+
+b := gopilot.NewBrowser(cfg, logger)
+err := b.Open(ctx, &gopilot.BrowserOpenInput{})
+if err != nil {
+    // Connection failed - browser may not be running
+    return
 }
+defer b.Close(ctx) // Closes pages but does NOT kill the browser
+```
 
-// which is basically:
-func (c *BrowserConfig) EnableHeadless() {
-	c.AddArgument("--headless=new")
+**Session-Based Page Tracking:**
+gopilot only manages pages it creates (via `NewTab: true`). This means:
+- `Close()` only closes pages created by this gopilot instance (session pages)
+- User tabs and pages from other gopilot instances are preserved
+- Multiple gopilot instances can safely share the same browser without conflicts
+
+**GetPages() vs GetAllPages():**
+- `GetPages()` - Returns only pages created by this instance (closeable)
+- `GetAllPages()` - Returns ALL pages in the browser for inspection (calling Close() on these is a no-op)
+
+See the [External Browser example](./examples/external_browser/main.go) for a complete demonstration.
+
+## Configuration Options
+
+gopilot provides several configuration options to customize browser behavior:
+
+### Browser Configuration
+
+The `BrowserConfig` struct allows you to configure how the browser is launched:
+
+```go
+type BrowserConfig struct {
+    // Path specifies the path to the browser executable
+    Path string
+
+    // DebugPort specifies the port for debugging connections
+    DebugPort string
+
+    // Args contains additional command-line arguments
+    Args []string
+
+    // Envs holds environment variables for the browser process
+    Envs []string
+
+    // OpenTimeout defines how long to wait for Chrome to print the
+    // "DevTools listening on" message during startup. If nil, defaults to 5s.
+    OpenTimeout *time.Duration
 }
 ```
 
-### TODO:
+### Default Configuration
 
-- Allow users to input an external browser endpoint
-- Taking screenshots of web pages and elements (yes, just element bounding box)
-- Setting, getting, and clearing local storage
-- Typing text into input fields
+When you call `gopilot.NewBrowserConfig()`, it creates a configuration with these defaults:
+
+- **Browser Path**: Uses the Chrome executable specified by the `GOPILOT_CHROME_EXECUTABLE` environment variable, or defaults to "chromium"
+- **Debug Port**: "9222"
+- **Default Arguments**: Several arguments for optimal browser operation:
+  - `--remote-allow-origins=*`
+  - `--no-first-run`
+  - `--no-service-autorun`
+  - `--no-default-browser-check`
+  - `--homepage=about:blank`
+  - And several others for stability and performance
+
+### Environment Variables
+
+- **GOPILOT_CHROME_EXECUTABLE**: Set this to specify the path to your Chrome or Chromium executable. For example:
+  ```bash
+  export GOPILOT_CHROME_EXECUTABLE="/usr/bin/google-chrome"
+  ```
+
+### Adding Custom Arguments
+
+You can add custom command-line arguments to the browser:
+
+```go
+cfg := gopilot.NewBrowserConfig()
+cfg.AddArgument("--disable-gpu")
+cfg.AddArgument("--window-size=1280,720")
+```
+
+
+## Project Status & Roadmap
+
+gopilot is currently in active development ("WIP" - Work In Progress). While the core functionality is stable enough for many use cases, the API may change as we refine and improve the library.
+
+### Current Status
+
+- Core browser automation features are implemented and working
+- API is functional but may undergo refinements
+- Documentation and examples are being expanded
+
+### Planned Features
+
+- Listen for page/target events to change local data
+- Integration tests
+- Performance optimizations
+- Additional helper methods for common tasks
+
+### Development Priorities
+
+1. API stabilization
+2. Improved error handling and recovery
+3. Enhanced documentation
+4. Performance improvements
 
 ## Contributions
 

@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 func main() {
@@ -81,7 +81,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// CLEAR COOKIES
-	_, err = page.ClearCookies(ctx, &gopilot.ClearCookiesInput{})
+	err = page.ClearCookies(ctx)
 	if err != nil {
 		logger.Error("unable to clear cookies", "error", err)
 		return

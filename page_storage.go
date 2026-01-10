@@ -2,11 +2,30 @@ package gopilot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/mafredri/cdp/protocol/domstorage"
 	"github.com/mafredri/cdp/protocol/network"
 	"github.com/mafredri/cdp/protocol/storage"
 )
+
+type PageStorage interface {
+	// GetCookies retrieves cookies for the current page.
+	// Takes a GetCookiesInput and returns GetCookiesOutput or an error.
+	GetCookies(ctx context.Context, in *GetCookiesInput) (*GetCookiesOutput, error)
+
+	// SetCookies sets cookies for the current page.
+	// Takes a SetCookiesInput and returns SetCookiesOutput or an error.
+	SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookiesOutput, error)
+
+	// ClearCookies clears cookies for the current page.
+	ClearCookies(ctx context.Context) error
+
+	GetLocalStorage(ctx context.Context, in *GetLocalStorageInput) (*GetLocalStorageOutput, error)
+	SetLocalStorage(ctx context.Context, in *SetLocalStorageInput) (*SetLocalStorageOutput, error)
+	ClearLocalStorage(ctx context.Context) error
+}
 
 // PageCookie represents a cookie in the browser.
 // It includes details such as name, value, domain, path, expiration, and security features.
@@ -105,21 +124,89 @@ func (p *page) SetCookies(ctx context.Context, in *SetCookiesInput) (*SetCookies
 	return &SetCookiesOutput{}, nil
 }
 
-// ClearCookiesInput specifies the input for the ClearCookies method.
-// It can include specific cookies to clear, but here it's currently set up to clear all cookies.
-type ClearCookiesInput struct {
-	Cookies PageCookie // The cookie to clear (currently not used in the implementation).
+// ClearCookies clears all cookies from the browser.
+func (p *page) ClearCookies(ctx context.Context) error {
+	return p.client.Storage.ClearCookies(ctx, &storage.ClearCookiesArgs{})
 }
 
-// ClearCookiesOutput is returned after clearing cookies successfully.
-type ClearCookiesOutput struct{}
+type LocalStorageItem struct {
+	Name  string `json:"name"`
+	Value string `json:"value,omitempty"`
+}
 
-// ClearCookies clears all cookies from the browser.
-// Returns a ClearCookiesOutput or an error if clearing fails.
-func (p *page) ClearCookies(ctx context.Context, _ *ClearCookiesInput) (*ClearCookiesOutput, error) {
-	err := p.client.Storage.ClearCookies(ctx, &storage.ClearCookiesArgs{})
+type SetLocalStorageInput struct {
+	Items []LocalStorageItem
+}
+type SetLocalStorageOutput struct{}
+
+func (p *page) SetLocalStorage(ctx context.Context, in *SetLocalStorageInput) (*SetLocalStorageOutput, error) {
+	pageURL, err := getPageCurrentURL(ctx, p)
 	if err != nil {
 		return nil, err
 	}
-	return &ClearCookiesOutput{}, nil
+	origin := fmt.Sprintf("%s://%s", pageURL.Scheme, pageURL.Host)
+
+	for _, i := range in.Items {
+		err := p.client.DOMStorage.SetDOMStorageItem(ctx, &domstorage.SetDOMStorageItemArgs{
+			StorageID: domstorage.StorageID{
+				IsLocalStorage: true,
+				SecurityOrigin: &origin,
+			},
+			Key:   i.Name,
+			Value: i.Value,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &SetLocalStorageOutput{}, nil
+}
+
+type GetLocalStorageInput struct{}
+type GetLocalStorageOutput struct {
+	Items []LocalStorageItem
+}
+
+func (p *page) GetLocalStorage(ctx context.Context, in *GetLocalStorageInput) (*GetLocalStorageOutput, error) {
+	pageURL, err := getPageCurrentURL(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	origin := fmt.Sprintf("%s://%s", pageURL.Scheme, pageURL.Host)
+
+	rp, err := p.client.DOMStorage.GetDOMStorageItems(ctx, &domstorage.GetDOMStorageItemsArgs{
+		StorageID: domstorage.StorageID{
+			IsLocalStorage: true,
+			SecurityOrigin: &origin,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var items []LocalStorageItem
+	for _, i := range rp.Entries {
+		items = append(items, LocalStorageItem{
+			Name:  i[0],
+			Value: i[1],
+		})
+	}
+
+	return &GetLocalStorageOutput{Items: items}, nil
+}
+
+type ClearLocalStorageInput struct{}
+type ClearLocalStorageOutput struct{}
+
+func (p *page) ClearLocalStorage(ctx context.Context) error {
+	pageURL, err := getPageCurrentURL(ctx, p)
+	if err != nil {
+		return err
+	}
+	origin := fmt.Sprintf("%s://%s", pageURL.Scheme, pageURL.Host)
+
+	return p.client.DOMStorage.Clear(ctx, &domstorage.ClearArgs{
+		StorageID: domstorage.StorageID{IsLocalStorage: true, SecurityOrigin: &origin},
+	})
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/falmar/gopilot/pkg/gopilot"
+	"github.com/falmar/gopilot"
 )
 
 // Keep chrome open with default setting for local raw cdp testing

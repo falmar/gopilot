@@ -104,8 +104,6 @@ func newPage(
 }
 
 func getPageCurrentURL(ctx context.Context, p *page) (*url.URL, error) {
-	// TODO: listen for target url changes
-
 	rValue := true
 	rp, err := p.client.Runtime.Evaluate(ctx, &runtime.EvaluateArgs{
 		Expression:    `window.location.toString()`,
@@ -137,14 +135,14 @@ func (p *page) Close(ctx context.Context) error {
 		return nil
 	}
 
-	defer p.conn.Close()
+	// DisableFetch if any open
+	_ = p.DisableFetch(ctx)
 
-	if p.interceptClient != nil {
-		p.logger.Debug("closing intercept client", "id", p.id)
-		err := p.interceptClient.Close()
-		if err != nil {
-			p.logger.Error("failed to close intercept client", "error", err)
-		}
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	if p.closed {
+		return nil
 	}
 
 	p.logger.Debug("closing session page", "id", p.id)
@@ -153,9 +151,8 @@ func (p *page) Close(ctx context.Context) error {
 		return err
 	}
 
-	p.mux.Lock()
 	p.closed = true
-	p.mux.Unlock()
+	p.conn.Close()
 
 	// Remove from session tracking using browser helper
 	if p.browser != nil {

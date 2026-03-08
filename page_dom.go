@@ -8,8 +8,10 @@ import (
 	"github.com/mafredri/cdp/protocol/dom"
 )
 
-var ErrElementNotFound = errors.New("page search: element not found")
-var ErrElementSearchTimeout = errors.New("page search: timeout")
+var (
+	ErrElementNotFound      = errors.New("page search: element not found")
+	ErrElementSearchTimeout = errors.New("page search: timeout")
+)
 
 type PageDOM interface {
 	// GetContent retrieves the HTML content of the page as a string.

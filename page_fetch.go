@@ -65,16 +65,20 @@ func (p *page) EnableFetch(ctx context.Context) error {
 // DisableFetch disables network request interception.
 // Returns an error if disabling fails.
 func (p *page) DisableFetch(ctx context.Context) error {
-	if p.fetchEnabled {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	if p.fetchEnabled && p.interceptClient != nil {
 		if err := p.interceptClient.Close(); err != nil {
 			p.logger.Debug("unable to close paused request handler", "error", err)
 		}
+		p.interceptClient = nil
 	}
+	p.fetchEnabled = false
 
 	if err := p.client.Fetch.Disable(ctx); err != nil {
 		return fmt.Errorf("unable to disable fetch: %w", err)
 	}
-	p.fetchEnabled = false
 	return nil
 }
 

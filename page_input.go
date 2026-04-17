@@ -52,71 +52,9 @@ type PageTypeTextOutput struct{}
 // Returns an PageTypeOutput with the result or an error if typing fails.
 func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTextOutput, error) {
 	last := len(in.Text)
-	for i, t := range in.Text {
-		t := string(t)
-		var toType *string = nil
-		var key *string = nil
-		var code *string = nil
-		var nativeVirtualCode *int = nil
-		var keyIdentifier *string = nil
-		var sysKey *bool = nil
-
-		toType = &t
-
-		if in.UseRawKeyDown && (t == " " || t == "\u00A0") {
-			t = " "
-			k := " "
-			c := "Space"
-			vc := 32
-			ki := "U+0020"
-			sk := true
-
-			key = &k
-			code = &c
-			nativeVirtualCode = &vc
-			keyIdentifier = &ki
-			sysKey = &sk
-			toType = &t
-
-			err := p.client.Input.DispatchKeyEvent(ctx, &input.DispatchKeyEventArgs{
-				Type:                  string(DispatchEventTypeRawKeyDown),
-				Key:                   key,
-				Code:                  code,
-				NativeVirtualKeyCode:  nativeVirtualCode,
-				WindowsVirtualKeyCode: nativeVirtualCode,
-				KeyIdentifier:         keyIdentifier,
-				IsSystemKey:           sysKey,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		err := p.client.Input.DispatchKeyEvent(ctx, &input.DispatchKeyEventArgs{
-			Type:                  string(DispatchEventTypeKeyDown),
-			Text:                  toType,
-			UnmodifiedText:        toType,
-			Key:                   key,
-			Code:                  code,
-			NativeVirtualKeyCode:  nativeVirtualCode,
-			WindowsVirtualKeyCode: nativeVirtualCode,
-			KeyIdentifier:         keyIdentifier,
-			IsSystemKey:           sysKey,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		err = p.client.Input.DispatchKeyEvent(ctx, &input.DispatchKeyEventArgs{
-			Type:                  string(DispatchEventTypeKeyUp),
-			Key:                   key,
-			Code:                  code,
-			NativeVirtualKeyCode:  nativeVirtualCode,
-			WindowsVirtualKeyCode: nativeVirtualCode,
-			KeyIdentifier:         keyIdentifier,
-			IsSystemKey:           sysKey,
-		})
-		if err != nil {
+	for i, r := range in.Text {
+		ki := KeyFromRune(r)
+		if err := p.dispatchKeyPress(ctx, ki.Key, ki.Modifiers, false, false); err != nil {
 			return nil, err
 		}
 
@@ -125,11 +63,11 @@ func (p *page) TypeText(ctx context.Context, in *PageTypeTextInput) (*PageTypeTe
 		}
 
 		if in.Delay > 0 {
-			if err = sleepWithCtx(ctx, in.Delay); err != nil {
+			if err := sleepWithCtx(ctx, in.Delay); err != nil {
 				return nil, err
 			}
 		} else if in.DelayFunc != nil {
-			if err = sleepWithCtx(ctx, in.DelayFunc()); err != nil {
+			if err := sleepWithCtx(ctx, in.DelayFunc()); err != nil {
 				return nil, err
 			}
 		}
@@ -158,71 +96,14 @@ func (p *page) PressKey(ctx context.Context, in *PagePressKeyInput) (*PagePressK
 		count = 1
 	}
 
-	key := in.Key.Key
-	code := in.Key.Code
-	keyCode := in.Key.KeyCode
-
 	for i := 0; i < count; i++ {
 		isRepeat := in.AutoRepeat && i > 0
 
-		// 1. Dispatch rawKeyDown
-		args := &input.DispatchKeyEventArgs{
-			Type:                  string(DispatchEventTypeRawKeyDown),
-			Key:                   &key,
-			Code:                  &code,
-			WindowsVirtualKeyCode: &keyCode,
-			NativeVirtualKeyCode:  &keyCode,
-		}
-		if in.Modifiers != 0 {
-			args.Modifiers = &in.Modifiers
-		}
-		if isRepeat {
-			args.AutoRepeat = &isRepeat
-		}
-		if err := p.client.Input.DispatchKeyEvent(ctx, args); err != nil {
+		// AutoRepeat: skip keyUp on intermediate iterations (simulates holding the key)
+		skipKeyUp := in.AutoRepeat && i < count-1
+
+		if err := p.dispatchKeyPress(ctx, in.Key, in.Modifiers, isRepeat, skipKeyUp); err != nil {
 			return nil, err
-		}
-
-		// 2. Dispatch char event if the key produces text
-		if in.Key.Text != "" {
-			text := in.Key.Text
-			if in.Modifiers&ModifierShift != 0 {
-				text = strings.ToUpper(text)
-			}
-			charArgs := &input.DispatchKeyEventArgs{
-				Type:                  string(DispatchEventTypeChar),
-				Key:                   &key,
-				Code:                  &code,
-				Text:                  &text,
-				UnmodifiedText:        &text,
-				WindowsVirtualKeyCode: &keyCode,
-				NativeVirtualKeyCode:  &keyCode,
-			}
-			if in.Modifiers != 0 {
-				charArgs.Modifiers = &in.Modifiers
-			}
-			if err := p.client.Input.DispatchKeyEvent(ctx, charArgs); err != nil {
-				return nil, err
-			}
-		}
-
-		// 3. Dispatch keyUp
-		// AutoRepeat: only send keyUp on the very last iteration (simulates holding the key)
-		// Manual repeat: send keyUp every iteration (simulates discrete presses)
-		if !in.AutoRepeat || i == count-1 {
-			upArgs := &input.DispatchKeyEventArgs{
-				Type:                  string(DispatchEventTypeKeyUp),
-				Key:                   &key,
-				Code:                  &code,
-				WindowsVirtualKeyCode: &keyCode,
-				NativeVirtualKeyCode:  &keyCode,
-			}
-			if in.Modifiers != 0 {
-				upArgs.Modifiers = &in.Modifiers
-			}
-			if err := p.client.Input.DispatchKeyEvent(ctx, upArgs); err != nil {
-				return nil, err
-			}
 		}
 
 		// Delay between repeated presses (skip after last)
@@ -240,4 +121,72 @@ func (p *page) PressKey(ctx context.Context, in *PagePressKeyInput) (*PagePressK
 	}
 
 	return &PagePressKeyOutput{}, nil
+}
+
+// dispatchKeyPress dispatches the rawKeyDown → char → keyUp sequence for a single key press.
+func (p *page) dispatchKeyPress(ctx context.Context, k Key, modifiers int, autoRepeat bool, skipKeyUp bool) error {
+	key := k.Key
+	code := k.Code
+	keyCode := k.KeyCode
+
+	// 1. Dispatch rawKeyDown
+	args := &input.DispatchKeyEventArgs{
+		Type:                  string(DispatchEventTypeRawKeyDown),
+		Key:                   &key,
+		Code:                  &code,
+		WindowsVirtualKeyCode: &keyCode,
+		NativeVirtualKeyCode:  &keyCode,
+	}
+	if modifiers != 0 {
+		args.Modifiers = &modifiers
+	}
+	if autoRepeat {
+		args.AutoRepeat = &autoRepeat
+	}
+	if err := p.client.Input.DispatchKeyEvent(ctx, args); err != nil {
+		return err
+	}
+
+	// 2. Dispatch char event if the key produces text
+	if k.Text != "" {
+		text := k.Text
+		if modifiers&ModifierShift != 0 {
+			text = strings.ToUpper(text)
+		}
+		charArgs := &input.DispatchKeyEventArgs{
+			Type:                  string(DispatchEventTypeChar),
+			Key:                   &key,
+			Code:                  &code,
+			Text:                  &text,
+			UnmodifiedText:        &text,
+			WindowsVirtualKeyCode: &keyCode,
+			NativeVirtualKeyCode:  &keyCode,
+		}
+		if modifiers != 0 {
+			charArgs.Modifiers = &modifiers
+		}
+		if err := p.client.Input.DispatchKeyEvent(ctx, charArgs); err != nil {
+			return err
+		}
+	}
+
+	// 3. Dispatch keyUp (skipped when simulating held key on intermediate presses)
+	if skipKeyUp {
+		return nil
+	}
+	upArgs := &input.DispatchKeyEventArgs{
+		Type:                  string(DispatchEventTypeKeyUp),
+		Key:                   &key,
+		Code:                  &code,
+		WindowsVirtualKeyCode: &keyCode,
+		NativeVirtualKeyCode:  &keyCode,
+	}
+	if modifiers != 0 {
+		upArgs.Modifiers = &modifiers
+	}
+	if err := p.client.Input.DispatchKeyEvent(ctx, upArgs); err != nil {
+		return err
+	}
+
+	return nil
 }

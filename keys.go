@@ -104,3 +104,105 @@ var (
 	Key8 = Key{Key: "8", Code: "Digit8", KeyCode: 56, Text: "8"}
 	Key9 = Key{Key: "9", Code: "Digit9", KeyCode: 57, Text: "9"}
 )
+
+// Symbol keys (US layout)
+var (
+	KeyMinus        = Key{Key: "-", Code: "Minus", KeyCode: 189, Text: "-"}
+	KeyEqual        = Key{Key: "=", Code: "Equal", KeyCode: 187, Text: "="}
+	KeyBracketLeft  = Key{Key: "[", Code: "BracketLeft", KeyCode: 219, Text: "["}
+	KeyBracketRight = Key{Key: "]", Code: "BracketRight", KeyCode: 221, Text: "]"}
+	KeyBackslash    = Key{Key: "\\", Code: "Backslash", KeyCode: 220, Text: "\\"}
+	KeySemicolon    = Key{Key: ";", Code: "Semicolon", KeyCode: 186, Text: ";"}
+	KeyQuote        = Key{Key: "'", Code: "Quote", KeyCode: 222, Text: "'"}
+	KeyBackquote    = Key{Key: "`", Code: "Backquote", KeyCode: 192, Text: "`"}
+	KeyComma        = Key{Key: ",", Code: "Comma", KeyCode: 188, Text: ","}
+	KeyPeriod       = Key{Key: ".", Code: "Period", KeyCode: 190, Text: "."}
+	KeySlash        = Key{Key: "/", Code: "Slash", KeyCode: 191, Text: "/"}
+)
+
+// runeToKey maps runes to their PagePressKeyInput (US keyboard layout).
+var runeToKey = map[rune]PagePressKeyInput{
+	// Letters
+	'a': {Key: KeyA}, 'b': {Key: KeyB}, 'c': {Key: KeyC}, 'd': {Key: KeyD},
+	'e': {Key: KeyE}, 'f': {Key: KeyF}, 'g': {Key: KeyG}, 'h': {Key: KeyH},
+	'i': {Key: KeyI}, 'j': {Key: KeyJ}, 'k': {Key: KeyK}, 'l': {Key: KeyL},
+	'm': {Key: KeyM}, 'n': {Key: KeyN}, 'o': {Key: KeyO}, 'p': {Key: KeyP},
+	'q': {Key: KeyQ}, 'r': {Key: KeyR}, 's': {Key: KeyS}, 't': {Key: KeyT},
+	'u': {Key: KeyU}, 'v': {Key: KeyV}, 'w': {Key: KeyW}, 'x': {Key: KeyX},
+	'y': {Key: KeyY}, 'z': {Key: KeyZ},
+
+	// Uppercase letters
+	'A': {Key: KeyA, Modifiers: ModifierShift}, 'B': {Key: KeyB, Modifiers: ModifierShift},
+	'C': {Key: KeyC, Modifiers: ModifierShift}, 'D': {Key: KeyD, Modifiers: ModifierShift},
+	'E': {Key: KeyE, Modifiers: ModifierShift}, 'F': {Key: KeyF, Modifiers: ModifierShift},
+	'G': {Key: KeyG, Modifiers: ModifierShift}, 'H': {Key: KeyH, Modifiers: ModifierShift},
+	'I': {Key: KeyI, Modifiers: ModifierShift}, 'J': {Key: KeyJ, Modifiers: ModifierShift},
+	'K': {Key: KeyK, Modifiers: ModifierShift}, 'L': {Key: KeyL, Modifiers: ModifierShift},
+	'M': {Key: KeyM, Modifiers: ModifierShift}, 'N': {Key: KeyN, Modifiers: ModifierShift},
+	'O': {Key: KeyO, Modifiers: ModifierShift}, 'P': {Key: KeyP, Modifiers: ModifierShift},
+	'Q': {Key: KeyQ, Modifiers: ModifierShift}, 'R': {Key: KeyR, Modifiers: ModifierShift},
+	'S': {Key: KeyS, Modifiers: ModifierShift}, 'T': {Key: KeyT, Modifiers: ModifierShift},
+	'U': {Key: KeyU, Modifiers: ModifierShift}, 'V': {Key: KeyV, Modifiers: ModifierShift},
+	'W': {Key: KeyW, Modifiers: ModifierShift}, 'X': {Key: KeyX, Modifiers: ModifierShift},
+	'Y': {Key: KeyY, Modifiers: ModifierShift}, 'Z': {Key: KeyZ, Modifiers: ModifierShift},
+
+	// Digits
+	'0': {Key: Key0}, '1': {Key: Key1}, '2': {Key: Key2}, '3': {Key: Key3},
+	'4': {Key: Key4}, '5': {Key: Key5}, '6': {Key: Key6}, '7': {Key: Key7},
+	'8': {Key: Key8}, '9': {Key: Key9},
+
+	// Whitespace
+	' ':  {Key: KeySpace},
+	'\t': {Key: KeyTab},
+	'\r': {Key: KeyEnter},
+	'\n': {Key: KeyEnter},
+
+	// Symbols (unshifted)
+	'-':  {Key: KeyMinus},
+	'=':  {Key: KeyEqual},
+	'[':  {Key: KeyBracketLeft},
+	']':  {Key: KeyBracketRight},
+	'\\': {Key: KeyBackslash},
+	';':  {Key: KeySemicolon},
+	'\'': {Key: KeyQuote},
+	'`':  {Key: KeyBackquote},
+	',':  {Key: KeyComma},
+	'.':  {Key: KeyPeriod},
+	'/':  {Key: KeySlash},
+
+	// Symbols (shifted)
+	'!': {Key: Key1, Modifiers: ModifierShift},
+	'@': {Key: Key2, Modifiers: ModifierShift},
+	'#': {Key: Key3, Modifiers: ModifierShift},
+	'$': {Key: Key4, Modifiers: ModifierShift},
+	'%': {Key: Key5, Modifiers: ModifierShift},
+	'^': {Key: Key6, Modifiers: ModifierShift},
+	'&': {Key: Key7, Modifiers: ModifierShift},
+	'*': {Key: Key8, Modifiers: ModifierShift},
+	'(': {Key: Key9, Modifiers: ModifierShift},
+	')': {Key: Key0, Modifiers: ModifierShift},
+	'_': {Key: KeyMinus, Modifiers: ModifierShift},
+	'+': {Key: KeyEqual, Modifiers: ModifierShift},
+	'{': {Key: KeyBracketLeft, Modifiers: ModifierShift},
+	'}': {Key: KeyBracketRight, Modifiers: ModifierShift},
+	'|': {Key: KeyBackslash, Modifiers: ModifierShift},
+	':': {Key: KeySemicolon, Modifiers: ModifierShift},
+	'"': {Key: KeyQuote, Modifiers: ModifierShift},
+	'~': {Key: KeyBackquote, Modifiers: ModifierShift},
+	'<': {Key: KeyComma, Modifiers: ModifierShift},
+	'>': {Key: KeyPeriod, Modifiers: ModifierShift},
+	'?': {Key: KeySlash, Modifiers: ModifierShift},
+}
+
+// KeyFromRune returns a PagePressKeyInput for a given rune (US keyboard layout).
+// For unknown runes, it returns a fallback with just the Text field set.
+func KeyFromRune(r rune) PagePressKeyInput {
+	if ki, ok := runeToKey[r]; ok {
+		return ki
+	}
+	// Fallback for unmapped runes
+	t := string(r)
+	return PagePressKeyInput{
+		Key: Key{Key: t, Text: t},
+	}
+}

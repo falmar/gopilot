@@ -52,13 +52,14 @@ type Browser interface {
 }
 
 type browser struct {
-	config       *BrowserConfig
-	logger       *slog.Logger
-	instance     *exec.Cmd
-	datadir      string
-	mux          sync.RWMutex
-	devtool      *devtool.DevTools
-	waitChan     chan error
+	config   *BrowserConfig
+	logger   *slog.Logger
+	instance *exec.Cmd
+	datadir  string
+	mux      sync.RWMutex
+	devtool  *devtool.DevTools
+	waitChan chan error
+
 	isExternal   bool             // true if connected to external browser via ConnectionURL
 	sessionPages map[string]*page // tracks pages created by this session (target ID -> page)
 }
@@ -68,8 +69,23 @@ func NewBrowser(cfg *BrowserConfig, logger *slog.Logger) Browser {
 	return &browser{
 		config:       cfg,
 		logger:       logger,
-		waitChan:     make(chan error),
+		waitChan:     make(chan error, 1),
 		sessionPages: make(map[string]*page),
+	}
+}
+
+func (b *browser) cleanup() {
+	if b.instance != nil && b.instance.Process != nil {
+		if err := b.instance.Process.Kill(); err != nil {
+			b.logger.Debug("kill browser error", "error", err)
+		}
+		<-b.waitChan
+	}
+	if b.datadir != "" {
+		if err := os.RemoveAll(b.datadir); err != nil {
+			b.logger.Warn("remove data dir error", "path", b.datadir, "error", err)
+		}
+		b.datadir = ""
 	}
 }
 
@@ -113,7 +129,7 @@ func (b *browser) clearSessionPages() {
 type BrowserOpenInput struct{}
 
 // Open initializes and starts the browser process, or connects to an existing browser.
-func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
+func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) (err error) {
 	if b.config.ConnectionURL != "" {
 		if err := b.openExternal(ctx); err != nil {
 			b.clearSessionPages()
@@ -129,6 +145,14 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	}
 	b.datadir = tempDir
 	b.logger.Debug("created data dir", "path", b.datadir)
+
+	// ensure browser is close when fails early
+	defer func() {
+		if err != nil {
+			b.logger.Info("open failed, cleaning up", "error", err)
+			b.cleanup()
+		}
+	}()
 
 	b.instance = exec.Command(b.config.Path)
 	b.instance.Env = b.config.Envs
@@ -170,8 +194,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		}
 	}()
 
-	err = b.instance.Start()
-	if err != nil {
+	if err = b.instance.Start(); err != nil {
 		return err
 	}
 	b.logger.Debug("waiting for devtool url message")
@@ -180,23 +203,20 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		b.waitChan <- b.instance.Wait()
 	}()
 
-	// Wait for the DevTools URL message or timeout
-	var waitDuration time.Duration
-
+	waitDuration := defaultOpenTimeout
 	if b.config.OpenTimeout != nil {
 		waitDuration = *b.config.OpenTimeout
-	} else {
-		waitDuration = defaultOpenTimeout
 	}
 
 	var devtoolsURLString string
 	select {
-	case err := <-b.waitChan:
-		return fmt.Errorf("exec wait exited unexpectedly or too soon: %w", err)
-	case <-time.NewTimer(waitDuration).C:
+	case <-ctx.Done():
+		return ctx.Err()
+	case werr := <-b.waitChan:
+		b.waitChan <- werr
+		return fmt.Errorf("exec wait exited unexpectedly or too soon: %w", werr)
+	case <-time.After(waitDuration):
 		return fmt.Errorf("duration %s exceeded waiting for devtool url", waitDuration)
-
-	// successful case
 	case dtMessage := <-dtChan:
 		dtSplit := strings.Split(dtMessage, "DevTools listening on")
 		if len(dtSplit) < 2 {
@@ -204,6 +224,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 		}
 		devtoolsURLString = strings.TrimSpace(dtSplit[1])
 	}
+
 	devtoolURL, err := url.Parse(devtoolsURLString)
 	if err != nil {
 		return err
@@ -212,8 +233,7 @@ func (b *browser) Open(ctx context.Context, in *BrowserOpenInput) error {
 	b.logger.Debug("creating devtool", "url", devtoolsURLString)
 	b.devtool = devtool.New(fmt.Sprintf("http://127.0.0.1:%s", devtoolURL.Port()))
 
-	// Validate connection by checking browser version
-	if _, err := b.devtool.Version(ctx); err != nil {
+	if _, err = b.devtool.Version(ctx); err != nil {
 		return fmt.Errorf("failed to connect to browser: %w", err)
 	}
 
@@ -384,45 +404,8 @@ func (b *browser) Close(ctx context.Context) error {
 		return nil
 	}
 
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(errChan)
-		b.logger.Debug("sending signal to close chrome instance")
-		errChan <- b.instance.Process.Kill()
-	}()
-
-	var closeTimeout time.Duration
-	if b.config.CloseTimeout != nil {
-		closeTimeout = *b.config.CloseTimeout
-	} else {
-		closeTimeout = defaultCloseTimeout
-	}
-
-	timer := time.NewTimer(closeTimeout)
-	defer timer.Stop()
-
-	select {
-	case err, ok := <-errChan:
-		if ok && err != nil {
-			b.logger.Error("error closing chrome instance. killing the process", "err", err)
-			_ = b.instance.Process.Kill()
-		}
-	case <-timer.C:
-		b.logger.Debug("closing chrome instance timeout", "timeout", closeTimeout)
-		_ = b.instance.Process.Kill()
-	}
-
-	defer func() {
-		if _, statErr := os.Stat(b.datadir); !os.IsNotExist(statErr) {
-			if removeErr := os.RemoveAll(b.datadir); removeErr != nil {
-				b.logger.Warn("removing data dir error", "path", b.datadir, "error", removeErr)
-			} else {
-				b.logger.Debug("removed data dir", "path", b.datadir)
-			}
-		}
-	}()
-
-	return <-b.waitChan
+	b.cleanup()
+	return nil
 }
 
 // GetDevToolClient retrieves the DevTools client associated with the browser.

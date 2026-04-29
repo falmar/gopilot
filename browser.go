@@ -378,6 +378,8 @@ func (b *browser) GetAllPages(ctx context.Context, _ *BrowserGetPagesInput) (*Br
 // Only closes session pages (pages created by this gopilot instance).
 // For external browsers (ConnectionURL), closes session pages but leaves the browser running.
 func (b *browser) Close(ctx context.Context) error {
+	ctx = context.WithoutCancel(ctx)
+
 	// allow a brief moment before closing pages
 	time.Sleep(defaultClosePause)
 

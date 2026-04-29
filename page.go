@@ -135,6 +135,8 @@ func (p *page) Close(ctx context.Context) error {
 		return nil
 	}
 
+	ctx = context.WithoutCancel(ctx)
+
 	// DisableFetch if any open
 	_ = p.DisableFetch(ctx)
 
